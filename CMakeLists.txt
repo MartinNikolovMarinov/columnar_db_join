@@ -70,7 +70,6 @@ set(src_files
     src/core/measurements.cpp
     src/core/utils.cpp
     src/core/random.cpp
-    # src/core/mmaped_file.cpp
 
     src/dbms.cpp
 
@@ -101,3 +100,34 @@ target_compile_definitions(${executable_name} PUBLIC
 )
 
 target_set_default_flags(${executable_name})
+
+
+if(BUILD_TESTS)
+    message(STATUS "Configuring tests")
+
+    set(test_executable ${executable_name}_test)
+
+    set(test_src_files
+        tests/t-index.cpp
+    )
+
+    add_executable(${test_executable} ${src_files} ${test_src_files} test_main.cpp)
+
+    target_include_directories(${test_executable} PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    )
+
+    target_compile_definitions(${test_executable} PUBLIC
+        ${executable_name_uppercase}_DEBUG="$<BOOL:${executable_name_uppercase}_DEBUG>"
+        ${executable_name_uppercase}_VERSION="${PROJECT_VERSION}"
+        ${executable_name_uppercase}_BINARY_PATH="${CMAKE_BINARY_DIR}"
+        ${executable_name_uppercase}_DATA_PATH="${CMAKE_SOURCE_DIR}/db"
+        CORE_ASSERT_ENABLED=${CORE_ASSERT_ENABLED}
+    )
+
+    target_set_default_flags(${test_executable})
+
+    enable_testing()
+    add_test(NAME ${test_executable} COMMAND ${test_executable})
+endif()
