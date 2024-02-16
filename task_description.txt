@@ -1,0 +1,111 @@
+# Test task
+
+## The task
+
+Given multiple data columns stored as files (see format description below) calculate sum of squares of sums of values across columns aligned against each other.
+
+## **Data Structure Overview**
+
+The task involves handling a data storage system where data is organized into columns, with each column comprising a set of records. Each record contains a key-value pair, where:
+
+- The key is composed of an arbitrary number of integer components, each 8 bytes long. The exact number of components in a key can vary from one column to another, but is the same across all records with a column.
+
+- The value associated with each key is also an 8-byte integer.
+
+## **File Storage Format**
+
+Each column's data is distributed across multiple binary files (.bin) within a folder, with one file for each key component and an additional file for the values. Folder name matches the column name. For example, a column with four key components would be stored in five separate binary files: four files for each of the key components and one file for the values. The naming convention for these files is as follows:
+
+- Key component files are named with a prefix `key_`  followed by the key component's name (i.e. `key_A.bin`  for key component `A` ).
+
+- The value file is simply named `value.bin` .
+
+The files are structured so that the positions (indices) match across files for any given record, allowing the combination of a complete record by aligning the indices. This organization facilitates efficient data retrieval and manipulation.
+
+Little Endian (LE) encoding is used everywhere.
+
+Each file stores corresponding values one after another. For example if column contains 1,000 records than each key component and value will be exactly 8,000 bytes each.
+
+## **Sorting of Records**
+
+Records within a column are sorted first by the value of the first key component, then by the second, and so on, following the lexicographical order of their component names (e.g., A, B, C). This sorting ensures that records are organized in a predictable manner, facilitating efficient data operations.
+
+## Alignment Rules for Data Columns
+
+This task focuses on developing a program to maximally efficiently align records from multiple data columns.The alignment process aims to match records across columns by shared key components, adhering to strict alignment criteria similar to an Inner Join in database terminology.
+
+Two records are considered **not aligned** if in any of the common key components they have a different values. In all other cases records are considered aligned.
+
+For a set of columns, efficient iteration over all possible combinations of mutually aligned records, exactly one records from each column, is called “an alignment”. (see example below)
+
+
+## Example
+
+### Column 1
+
+```yaml
+
+A  B Value
+
+42 0 1
+42 1 3
+42 7 5
+42 8 5
+85 1 3
+86 1 7
+86 2 0
+
+```
+
+### Column 2
+
+```yaml
+
+B  C Value
+
+1  9 12
+2  6 5
+
+```
+
+### Column 3
+
+```yaml
+
+A  C  D  Value
+
+42 9  7  4
+42 10 8  5
+86 2  9  17
+86 6  10 3
+86 9  11 19
+86 9  17 7
+86 32 12 5
+92 7  13 5
+
+```
+
+## Aligned
+
+```yaml
+
+A  B  C  D  Column1 Column2 Column3 Sum^2
+
+42 1  9  7  3       12      4       361
+86 1  9  11 7       12      19      1444
+86 1  9  17 7       12      7       676
+86 2  6  10 0       5       3       64
+
+                            Total = 2545
+
+```
+
+The example above corresponds to the `small-example` in provided datasets.
+
+## Data
+
+Two additional datasets are provided to test the algorithm. Correct results are the following:
+
+- `big-example`  = 266472168
+- `corner-case`  = 93553260
+

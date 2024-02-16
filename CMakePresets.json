@@ -1,0 +1,23 @@
+{
+	"version": 3,
+	"configurePresets": [
+		{
+			"name": "debug",
+			"displayName": "Debug configuration.",
+			"description": "Debug configuration.",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "release",
+			"displayName": "Release configuration.",
+			"description": "Release configuration.",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		}
+	]
+}
