@@ -20,7 +20,7 @@ using globalAssertHandlerPtr = void (*)(const char* failedExpr, const char* file
 void setGlobalAssertHandler(globalAssertHandlerPtr handler);
 globalAssertHandlerPtr getGlobalAssertHandler();
 
-#if defined(CORE_ASSERT_ENABLED) && CORE_ASSERT_ENABLED
+#if defined(CORE_ASSERT_ENABLED)
     #ifndef Assert
         // This macro will dereference null to force a crash,
         // unless the global assert handler is set and returns false,
@@ -42,10 +42,10 @@ globalAssertHandlerPtr getGlobalAssertHandler();
 #endif
 
 #ifndef Panic
-    #if defined(CORE_ASSERT_ENABLED) && CORE_ASSERT_ENABLED
+    #if defined(CORE_ASSERT_ENABLED)
         #define Panic(...) Assert(__VA_ARGS__)
     #else
-        #define Panic(...) *reinterpret_cast<volatile coretypes::i32 *>(0) = 0;
+        #define Panic(...) *reinterpret_cast<volatile i32 *>(0) = 0;
     #endif
 #endif
 
