@@ -37,7 +37,7 @@ void initSubmodules();
 void loadDatabase(const char* path, Database& db);
 void debug_printTable(dbms::Table& table);
 
-std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& tables);
-bool isJoinPossible(const std::vector<dbms::Table>& tables);
+std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables);
+bool canBeAligned(const std::vector<dbms::Table>& tables);
 
 } // namespace dbms

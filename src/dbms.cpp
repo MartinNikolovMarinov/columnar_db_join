@@ -118,7 +118,7 @@ void debug_printTable(dbms::Table& table) {
     logInfo("\nTable: %s\n%s", table.name.c_str(), result.c_str());
 }
 
-std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& tables) {
+std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables) {
     if (tables.empty()) return {};
 
     std::vector<dbms::Table> result;
@@ -210,7 +210,7 @@ std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& table
     return result;
 }
 
-bool isJoinPossible(const std::vector<dbms::Table>& tables) {
+bool canBeAligned(const std::vector<dbms::Table>& tables) {
     // Iterate through each table to check if it has at least one column that matches a column in any other table
     for (size_t i = 0; i < tables.size(); ++i) {
         bool foundMatch = false;

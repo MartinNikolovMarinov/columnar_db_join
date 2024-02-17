@@ -1,16 +1,236 @@
 #include <dbms.h>
 
-int main() {
-    using namespace dbms;
+#include <unordered_map>
+#include <optional>
 
-    initSubmodules();
+struct ColumnData {
+    const u64* src;
+};
 
-    Database db;
-    loadDatabase(DBMS_DATA_PATH"/small-example", db);
+struct Table {
+    u64 columnDataCount;
+    std::vector<std::string> columnNames;
+    std::vector<ColumnData> columnData;
 
-    for (auto& table : db.tables) {
-        debug_printTable(table);
+    bool isValid() {
+        if (columnData.size() < 2 ||
+            columnData.size() != columnNames.size()) {
+            logWarn("Column sizes in table do not match");
+            return false;
+        }
+
+        for (u64 i = 0; i < columnNames.size(); i++) {
+            if ((i < columnNames.size() - 2) && columnNames[i] > columnNames[i + 1]) {
+                // The columns need to be lexically ordered. Except for the last one.
+                logWarn("Column names are not lexically ordered");
+                return false;
+            }
+
+            if (columnData[i].src == nullptr) {
+                // The column data must not be a nullptr.
+                logWarn("Column data is nullptr");
+                return false;
+            }
+        }
+
+        return true;
+    }
+};
+
+struct AlignedTable {
+    u64 columnDataCount;
+    std::vector<std::string> columnNames;
+    std::vector<std::vector<u64>> columnData;
+    std::vector<std::vector<u64>> valueColumns;
+};
+
+void debug_printAlignedTable(AlignedTable& t) {
+    std::string result;
+
+    for (u64 i = 0; i < t.columnNames.size(); i++) {
+        result += t.columnNames[i] + ' ';
     }
 
-    return 0;
+    for (u64 i = 0; i < t.columnDataCount; i++) {
+        result += "\n";
+        for (u64 j = 0; j < t.columnData.size(); j++) {
+            result += std::to_string(t.columnData[j][i]) + ' ';
+        }
+    }
+
+    logInfo("\n%s", result.data());
+}
+
+AlignedTable createAlignedTable(const std::vector<Table>& tables) {
+    TRACE_BLOCK_CPU_TIME("createAlignedTable CPU time");
+
+    if (tables.empty()) {
+        return AlignedTable();
+    }
+
+    AlignedTable result;
+    result.columnDataCount = 0;
+
+    std::vector<std::string> uniqueColNames;
+
+    for (auto& table : tables) {
+        for (auto& colName : table.columnNames) {
+            if (colName != "value") {
+                core::push_back_unique(uniqueColNames, colName);
+            }
+        }
+    }
+
+    std::sort(uniqueColNames.begin(), uniqueColNames.end());
+    result.columnData.resize(uniqueColNames.size());
+    result.columnNames = std::move(uniqueColNames);
+    result.columnDataCount = 0;
+    result.valueColumns.resize(tables.size());
+
+    return result;
+}
+
+std::vector<std::pair<u64, u64>> createIndexTranslationTable(const std::vector<std::string>& from, u64 fromCount,
+                                                             const std::vector<std::string>& to, u64 toCount) {
+    std::vector<std::pair<u64, u64>> ttable;
+    for (u64 i = 0; i < fromCount; i++) {
+        for (u64 j = 0; j < toCount; j++) {
+            if (from[i] == to[j]) {
+                ttable.push_back({ i, j });
+                break;
+            }
+        }
+    }
+    return ttable;
+}
+
+
+/**
+ * @brief TODO: Write description
+ *
+ * Assumes that the tables are valid!
+*/
+void alignOn2ClusteredIdx(AlignedTable& result, const Table& t1, const Table& t2) {
+    auto t1src = t1.columnData[0].src;
+    auto t2src = t2.columnData[0].src;
+    u64 t1count = t1.columnDataCount;
+    u64 t2count = t2.columnDataCount;
+    u64 t1curr = 0;
+    u64 t2curr = 0;
+    std::optional<u64> t2FirstMatchInGroup;
+
+    auto ttableFromT1toT2 = createIndexTranslationTable(t1.columnNames, t1.columnNames.size() - 1, t2.columnNames, t2.columnNames.size() - 1);
+    auto ttableFromResultToT1 = createIndexTranslationTable(result.columnNames, result.columnNames.size(), t1.columnNames, t1.columnNames.size() - 1);
+    auto ttableFromResultToT2 = createIndexTranslationTable(result.columnNames, result.columnNames.size(), t2.columnNames, t2.columnNames.size() - 1);
+
+    while (t1curr < t1count && t2curr < t2count) {
+        auto a = *(t1src + t1curr);
+        auto b = *(t2src + t2curr);
+
+        bool match = a == b; // clustered indices match.
+
+        if (match) {
+            // Check if all of the secondary indices match.
+            for (auto& [t1idx, t2idx] : ttableFromT1toT2) {
+                if (t1.columnData[t1idx].src[t1curr] != t2.columnData[t2idx].src[t2curr]) {
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match) {
+                // Write from the first table:
+                for (auto& [resultIdx, t1idx] : ttableFromResultToT1) {
+                    result.columnData[resultIdx].resize(result.columnDataCount + 1);
+                    result.columnData[resultIdx][result.columnDataCount] = (t1.columnData[t1idx].src[t1curr]);
+                }
+
+                // Write from the second table:
+                for (auto& [resultIdx, t2idx] : ttableFromResultToT2) {
+                    result.columnData[resultIdx].resize(result.columnDataCount + 1);
+                    result.columnData[resultIdx][result.columnDataCount] = (t2.columnData[t2idx].src[t2curr]);
+                }
+
+                result.columnDataCount++;
+            }
+
+            if (!t2FirstMatchInGroup.has_value()) {
+                t2FirstMatchInGroup = t2curr;
+            }
+            t2curr++;
+        }
+        else if (a < b) {
+            if (t2FirstMatchInGroup.has_value()) {
+                t2curr = t2FirstMatchInGroup.value();
+                t2FirstMatchInGroup.reset();
+            }
+            t1curr++;
+        }
+        else {
+            if (t2FirstMatchInGroup.has_value()) {
+                t2curr = t2FirstMatchInGroup.value();
+                t2FirstMatchInGroup.reset();
+            }
+            t2curr++;
+        }
+    }
+}
+
+
+int main() {
+    dbms::initSubmodules();
+
+    Table t1;
+    u64 t1c1data[] = { 42, 42, 42, 42, 85, 86, 86 };
+    u64 t1c2data[] = { 0, 1, 7, 8, 1, 1, 2 };
+    u64 t1valdata[] = { 1, 3, 5, 5, 3, 7, 0 };
+    {
+        t1.columnNames = {"A", "B", "value"};
+
+        constexpr addr_size c1dataSize = sizeof(t1c1data) / sizeof(t1c1data[0]);
+        constexpr addr_size c2dataSize = sizeof(t1c2data) / sizeof(t1c2data[0]);
+        constexpr addr_size valdataSize = sizeof(t1valdata) / sizeof(t1valdata[0]);
+
+        // Sanity check:
+        static_assert(c1dataSize == c2dataSize);
+        static_assert(c1dataSize == valdataSize);
+
+        t1.columnDataCount = c1dataSize;
+        t1.columnData.push_back({ t1c1data  });
+        t1.columnData.push_back({ t1c2data  });
+        t1.columnData.push_back({ t1valdata });
+    }
+
+    Table t2;
+    u64 t2c1data[] = { 42, 42, 86, 86, 86, 86, 86, 92 };
+    u64 t2c2data[] = { 9, 10, 2, 6, 9, 9, 32, 7};
+    u64 t2c3data[] = { 7, 8, 9, 10, 11, 17, 12, 13 };
+    u64 t2valdata[] = { 4, 5, 17, 3, 19, 7, 5, 5 };
+    {
+        t2.columnNames = {"A", "C", "D", "value"};
+
+        constexpr addr_size c1dataSize = sizeof(t2c1data) / sizeof(t2c1data[0]);
+        constexpr addr_size c2dataSize = sizeof(t2c2data) / sizeof(t2c2data[0]);
+        constexpr addr_size c3dataSize = sizeof(t2c3data) / sizeof(t2c3data[0]);
+        constexpr addr_size valdataSize = sizeof(t2valdata) / sizeof(t2valdata[0]);
+
+        // Sanity check:
+        static_assert(c1dataSize == c2dataSize);
+        static_assert(c1dataSize == c3dataSize);
+        static_assert(c1dataSize == valdataSize);
+
+        t2.columnDataCount = c1dataSize;
+        t2.columnData.push_back({ t2c1data  });
+        t2.columnData.push_back({ t2c2data  });
+        t2.columnData.push_back({ t2c3data  });
+        t2.columnData.push_back({ t2valdata });
+    }
+
+    Assert(t1.isValid());
+    Assert(t2.isValid());
+
+    std::vector<Table> tables = { std::move(t1), std::move(t2) };
+    AlignedTable tresult = createAlignedTable(tables);
+    alignOn2ClusteredIdx(tresult, tables[0], tables[1]);
+    debug_printAlignedTable(tresult);
 }
