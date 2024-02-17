@@ -72,6 +72,7 @@ set(src_files
     src/core/random.cpp
 
     src/dbms.cpp
+    src/data_source.cpp
 
     tools/generate.cpp
 )

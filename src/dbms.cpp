@@ -2,6 +2,7 @@
 
 #include <unordered_set>
 #include <stdio.h>
+#include <string.h>
 
 namespace dbms {
 
@@ -28,8 +29,7 @@ void loadDatabase(const char* path, Database& db) {
 
     db.path = path;
     db.name = fs::path(path).filename().string();
-
-    std::vector<Table> tables;
+    db.tables.clear();
 
     for (const auto & columnDir : fs::directory_iterator(db.path)) {
         if (columnDir.is_directory()) {
@@ -39,37 +39,83 @@ void loadDatabase(const char* path, Database& db) {
 
             for (const auto & columnFile : fs::directory_iterator(columnDir.path())) {
                 if (columnFile.is_regular_file()) {
-                    Column c;
-                    c.name = columnFile.path().stem().string();
-                    std::error_code error;
-                    c.memorySrc = mio::make_mmap_source(columnFile.path().string().c_str(), 0, mio::map_entire_file, error);
-                    if (error) {
-                        logFatal("error mapping file: %s, exiting...", error.message().c_str());
-                        Panic(false, "Mapping failed. Exiting...");
+                    std::string colName = columnFile.path().stem().string();
+                    if (colName != "value" && colName.find(DBMS_DATA_COLUMN_PREFIX) != std::string::npos) {
+                        colName = colName.erase(0, colName.find_last_of(DBMS_DATA_COLUMN_PREFIX) + 1);
                     }
-                    t.columns.push_back(std::move(c));
+                    t.columnNames.push_back(std::move(colName));
                 }
             }
 
-            tables.push_back(std::move(t));
-        }
-    }
+            std::sort(t.columnNames.begin(), t.columnNames.end(), [](const std::string& a, const std::string& b) {
+                if (a == "value") return false;
+                return a < b;
+            });
 
-    for (const auto& t : tables) {
-        printf("Table: { name: %s, path: %s }\n", t.name.c_str(), t.path.c_str());
-        for (const auto& c : t.columns) {
-            printf("Column: { name: %s, size: %lu }\n", c.name.c_str(), c.memorySrc.size() / sizeof(u64));
+            for (const auto& colName : t.columnNames) {
+                std::string pathToFile;
+                if (colName == "value") {
+                    pathToFile = (columnDir.path() / (colName + DBMS_DATA_FILE_EXTENSION)).string();
+                }
+                else {
+                    pathToFile = (columnDir.path() / (DBMS_DATA_COLUMN_PREFIX + colName + DBMS_DATA_FILE_EXTENSION)).string();
+                }
 
-            const u64* curr = reinterpret_cast<const u64*>(c.memorySrc.data());
-
-            for (size_t i = 0; i < c.memorySrc.size() / sizeof(u64); i ++) {
-                u64 e1 = *(curr);
-                curr++;
-
-                printf("%lu\n", e1);
+                ColumnData c;
+                int error = c.memorySrc.open(pathToFile.c_str(), 0);
+                if (error != 0) {
+                    logFatal("Error Mapping File: %s, exiting...", strerror(error));
+                    Panic(false, "Failed to loadDatabase. Reason: Mapping failed.");
+                }
+                t.columns.push_back(std::move(c));
             }
+
+            db.tables.push_back(std::move(t));
         }
     }
+}
+
+void debug_printTable(dbms::Table& table) {
+    std::vector<std::vector<u64>> inmemory;
+    std::vector<std::string> columnNames;
+
+    for (addr_size i = 0; i < table.columns.size(); i++) {
+        auto& col = table.columns[i];
+        const auto& colName = table.columnNames[i];
+
+        std::vector<u64> columnData;
+        columnData.reserve(col.memorySrc.size() / sizeof(u64));
+        inmemory.push_back(columnData);
+
+        columnNames.push_back(colName);
+
+        addr_size max = 0;
+        const u64* data = static_cast<const u64*>(col.memorySrc.data(0, max));
+        Assert(max == col.memorySrc.size(), "TODO: Implement reading multiple chunks of data for data sources that don't use memory mapping.");
+        max /= sizeof(u64);
+
+        for (addr_size j = 0; j < max; j++) {
+            inmemory[i].push_back(data[j]);
+        }
+    }
+
+    std::string result;
+
+    // Print table header:
+    for (addr_size j = 0; j < columnNames.size(); j++) {
+        result += columnNames[j] + " ";
+    }
+    result += "\n";
+
+    // Print table data:
+    for (addr_size i = 0; i < inmemory[0].size(); i++) {
+        for (addr_size j = 0; j < inmemory.size(); j++) {
+            result += std::to_string(inmemory[j][i]) + " ";
+        }
+        result += "\n";
+    }
+
+    logInfo("\nTable: %s\n%s", table.name.c_str(), result.c_str());
 }
 
 std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& tables) {
@@ -85,16 +131,16 @@ std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& table
     // Group together all tables that have the same clustered index
     {
         for (addr_size i = 0; i < tables.size(); i++) {
-            if (tables[i].columns.empty()) continue;
+            if (tables[i].columnNames.empty()) continue;
 
-            const std::string& a = tables[i].columns[0].name;
+            const std::string& a = tables[i].columnNames[0];
 
             addr_off idx = -1;
             for (addr_size j = 0; j < tables.size(); j++) {
                 if (i == j) continue;
-                if (tables[j].columns.empty()) continue;
+                if (tables[j].columnNames.empty()) continue;
 
-                const std::string& b = tables[j].columns[0].name;
+                const std::string& b = tables[j].columnNames[0];
                 if (a == b) {
                     idx = j;
                     break;
@@ -110,18 +156,18 @@ std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& table
     // Group together all tables that can be joined on one cluster index
     {
         for (addr_size i = 0; i < tables.size(); i++) {
-            if (tables[i].columns.empty()) continue;
+            if (tables[i].columnNames.empty()) continue;
             if (joinWithBothClustered.count(i) > 0) continue;
 
-            const std::string& a = tables[i].columns[0].name;
+            const std::string& a = tables[i].columnNames[0];
 
             addr_off idx = -1;
             for (addr_size j = 0; j < tables.size(); j++) {
                 if (i == j) continue;
-                if (tables[j].columns.empty()) continue;
+                if (tables[j].columnNames.empty()) continue;
 
-                for (const auto& col : tables[j].columns) {
-                    if (a == col.name) {
+                for (const auto& col : tables[j].columnNames) {
+                    if (a == col) {
                         idx = j;
                         break;
                     }
@@ -139,7 +185,7 @@ std::vector<dbms::Table> optimizeExecutionOrder(std::vector<dbms::Table>&& table
     // Group together with least priority tables that can be joined only on un-clustered indices:
     {
         for (addr_size i = 0; i < tables.size(); i++) {
-            if (tables[i].columns.empty()) continue;
+            if (tables[i].columnNames.empty()) continue;
 
             if (joinWithBothClustered.count(i) == 0 && joinWithOneClustered.count(i) == 0) {
                 joinWithNoClustered.insert(i);
@@ -173,9 +219,9 @@ bool isJoinPossible(const std::vector<dbms::Table>& tables) {
 
             const auto& table1 = tables[i];
             const auto& table2 = tables[j];
-            for (const auto& col1 : table1.columns) {
-                for (const auto& col2 : table2.columns) {
-                    if (col1.name == col2.name) {
+            for (const auto& col1 : table1.columnNames) {
+                for (const auto& col2 : table2.columnNames) {
+                    if (col1 == col2) {
                         foundMatch = true;
                         break;
                     }
