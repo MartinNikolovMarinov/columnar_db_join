@@ -38,10 +38,38 @@ struct Table {
 };
 
 struct AlignedTable {
-    u64 columnDataCount;
     std::vector<std::string> columnNames;
     std::vector<std::vector<u64>> columnData;
     std::vector<std::vector<u64>> valueColumns;
+
+    AlignedTable() : m_cap(0), m_writeIdx(0) {}
+
+    inline u64 cap() const { return m_cap; }
+
+    inline void advanceWriteIdx() {
+        m_writeIdx++;
+        if (m_writeIdx > m_cap) {
+            m_cap = m_writeIdx;
+        }
+    }
+
+    inline void writeAt(u64 columnIdx, u64 value) {
+        auto& colData = columnData[columnIdx];
+        if (m_writeIdx >= colData.size()) {
+            colData.push_back(value);
+        }
+        else {
+            colData[m_writeIdx] = value;
+        }
+    }
+
+    inline void reset() {
+        m_writeIdx = 0;
+    }
+
+private:
+    u64 m_cap;
+    u64 m_writeIdx;
 };
 
 void debug_printAlignedTable(AlignedTable& t) {
@@ -51,7 +79,7 @@ void debug_printAlignedTable(AlignedTable& t) {
         result += t.columnNames[i] + ' ';
     }
 
-    for (u64 i = 0; i < t.columnDataCount; i++) {
+    for (u64 i = 0; i < t.cap(); i++) {
         result += "\n";
         for (u64 j = 0; j < t.columnData.size(); j++) {
             result += std::to_string(t.columnData[j][i]) + ' ';
@@ -69,7 +97,6 @@ AlignedTable createAlignedTable(const std::vector<Table>& tables) {
     }
 
     AlignedTable result;
-    result.columnDataCount = 0;
 
     std::vector<std::string> uniqueColNames;
 
@@ -84,26 +111,10 @@ AlignedTable createAlignedTable(const std::vector<Table>& tables) {
     std::sort(uniqueColNames.begin(), uniqueColNames.end());
     result.columnData.resize(uniqueColNames.size());
     result.columnNames = std::move(uniqueColNames);
-    result.columnDataCount = 0;
     result.valueColumns.resize(tables.size());
 
     return result;
 }
-
-std::vector<std::pair<u64, u64>> createIndexTranslationTable(const std::vector<std::string>& from, u64 fromCount,
-                                                             const std::vector<std::string>& to, u64 toCount) {
-    std::vector<std::pair<u64, u64>> ttable;
-    for (u64 i = 0; i < fromCount; i++) {
-        for (u64 j = 0; j < toCount; j++) {
-            if (from[i] == to[j]) {
-                ttable.push_back({ i, j });
-                break;
-            }
-        }
-    }
-    return ttable;
-}
-
 
 /**
  * @brief TODO: Write description
@@ -119,9 +130,9 @@ void alignOn2ClusteredIdx(AlignedTable& result, const Table& t1, const Table& t2
     u64 t2curr = 0;
     std::optional<u64> t2FirstMatchInGroup;
 
-    auto ttableFromT1toT2 = createIndexTranslationTable(t1.columnNames, t1.columnNames.size() - 1, t2.columnNames, t2.columnNames.size() - 1);
-    auto ttableFromResultToT1 = createIndexTranslationTable(result.columnNames, result.columnNames.size(), t1.columnNames, t1.columnNames.size() - 1);
-    auto ttableFromResultToT2 = createIndexTranslationTable(result.columnNames, result.columnNames.size(), t2.columnNames, t2.columnNames.size() - 1);
+    auto ttableFromT1toT2 = dbms::createIndexTranslationTable(t1.columnNames, t1.columnNames.size() - 1, t2.columnNames, t2.columnNames.size() - 1);
+    auto ttableFromResultToT1 = dbms::createIndexTranslationTable(result.columnNames, result.columnNames.size(), t1.columnNames, t1.columnNames.size() - 1);
+    auto ttableFromResultToT2 = dbms::createIndexTranslationTable(result.columnNames, result.columnNames.size(), t2.columnNames, t2.columnNames.size() - 1);
 
     while (t1curr < t1count && t2curr < t2count) {
         auto a = *(t1src + t1curr);
@@ -141,17 +152,17 @@ void alignOn2ClusteredIdx(AlignedTable& result, const Table& t1, const Table& t2
             if (match) {
                 // Write from the first table:
                 for (auto& [resultIdx, t1idx] : ttableFromResultToT1) {
-                    result.columnData[resultIdx].resize(result.columnDataCount + 1);
-                    result.columnData[resultIdx][result.columnDataCount] = (t1.columnData[t1idx].src[t1curr]);
+                    u64 value = t1.columnData[t1idx].src[t1curr];
+                    result.writeAt(resultIdx, value);
                 }
 
                 // Write from the second table:
                 for (auto& [resultIdx, t2idx] : ttableFromResultToT2) {
-                    result.columnData[resultIdx].resize(result.columnDataCount + 1);
-                    result.columnData[resultIdx][result.columnDataCount] = (t2.columnData[t2idx].src[t2curr]);
+                    u64 value = t2.columnData[t2idx].src[t2curr];
+                    result.writeAt(resultIdx, value);
                 }
 
-                result.columnDataCount++;
+                result.advanceWriteIdx();
             }
 
             if (!t2FirstMatchInGroup.has_value()) {

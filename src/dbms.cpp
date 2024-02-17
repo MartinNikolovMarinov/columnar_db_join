@@ -211,7 +211,7 @@ std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table
 }
 
 bool canBeAligned(const std::vector<dbms::Table>& tables) {
-    // Iterate through each table to check if it has at least one column that matches a column in any other table
+    // To align tables, they must have at least one matching column with another table
     for (size_t i = 0; i < tables.size(); ++i) {
         bool foundMatch = false;
         for (size_t j = 0; j < tables.size(); ++j) {
@@ -235,6 +235,22 @@ bool canBeAligned(const std::vector<dbms::Table>& tables) {
     }
 
     return true; // All tables have at least one matching column with another table, join is possible
+}
+
+std::vector<std::pair<u64, u64>> createIndexTranslationTable(const std::vector<std::string>& from, u64 fromCount,
+                                                             const std::vector<std::string>& to, u64 toCount) {
+    fromCount = std::min(fromCount, from.size());
+    toCount = std::min(toCount, to.size());
+    std::vector<std::pair<u64, u64>> ttable;
+    for (u64 i = 0; i < fromCount; i++) {
+        for (u64 j = 0; j < toCount; j++) {
+            if (from[i] == to[j]) {
+                ttable.push_back({ i, j });
+                break;
+            }
+        }
+    }
+    return ttable;
 }
 
 } // namespace dbms
