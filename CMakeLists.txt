@@ -74,6 +74,7 @@ set(src_files
     src/dbms.cpp
     src/hash_join.cpp
     src/sort.cpp
+    src/nested_loop_join.cpp
 
     tools/generate.cpp
 )
