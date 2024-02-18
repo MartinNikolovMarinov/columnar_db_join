@@ -16,6 +16,8 @@ struct JoinResult;
 using ColumnGroup = std::vector<Column>;
 using IndexTranslationTable = std::vector<std::pair<u64, u64>>;
 
+void initSubmodules();
+
 struct DataSource {
 
     DataSource() : m_size(0), m_src(nullptr) {}
@@ -77,6 +79,7 @@ struct ColumnNames {
     std::vector<std::string> colNames;
     std::vector<std::string> valueColNames;
 };
+
 struct JoinResult {
     ColumnGroup columns;
     ColumnNames names;
@@ -84,13 +87,12 @@ struct JoinResult {
     static JoinResult createFromNames(const ColumnNames& a, const ColumnNames& b);
 };
 
-void initSubmodules();
+u64 sumSquared(JoinResult& cols);
 
 // void loadDatabase(const char* path, Database& db);
 // void debug_printTable(dbms::Table& table);
 
 // std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables);
-// bool canBeAligned(const std::vector<dbms::Table>& tables);
 
 /**
  * @brief Create a translation table to translate the index of the source table to the index of the destination table.
@@ -104,18 +106,11 @@ void initSubmodules();
 */
 IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to);
 
-/**
- * @brief FIXME: Write a description
-*/
 JoinResult hashJoin(const ColumnGroup& left,
                     const ColumnGroup& right,
                     const ColumnNames& leftColNames,
                     const ColumnNames& rightColNames);
 
-
-/**
- * @brief FIXME: Write a description
-*/
 void sortColumns(ColumnGroup& cols);
 
 } // namespace dbms

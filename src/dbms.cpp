@@ -210,33 +210,6 @@ void initSubmodules() {
 //     return result;
 // }
 
-// bool canBeAligned(const std::vector<dbms::Table>& tables) {
-//     // To align tables, they must have at least one matching column with another table
-//     for (size_t i = 0; i < tables.size(); ++i) {
-//         bool foundMatch = false;
-//         for (size_t j = 0; j < tables.size(); ++j) {
-//             if (i == j) continue; // Skip comparing the table with itself
-
-//             const auto& table1 = tables[i];
-//             const auto& table2 = tables[j];
-//             for (const auto& col1 : table1.columnNames) {
-//                 for (const auto& col2 : table2.columnNames) {
-//                     if (col1 == col2) {
-//                         foundMatch = true;
-//                         break;
-//                     }
-//                 }
-//                 if (foundMatch) break;
-//             }
-//             if (foundMatch) break;
-//         }
-
-//         if (!foundMatch) return false; // If no matching column found for this table, join is not possible
-//     }
-
-//     return true; // All tables have at least one matching column with another table, join is possible
-// }
-
 IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to) {
     IndexTranslationTable ttable;
     for (u64 i = 0; i < from.colNames.size(); i++) {
@@ -275,5 +248,26 @@ JoinResult JoinResult::createFromNames(const ColumnNames& a, const ColumnNames& 
     return result;
 }
 
-} // namespace dbms
+u64 sumSquared(JoinResult& cols) {
+    if (cols.columns.empty()) return 0;
 
+    u64 valuesStart = cols.names.colNames.size();
+    u64 total = 0;
+    std::vector<u64> sumSquaredColumn (cols.columns[0].data().size());
+
+    for (u64 i = 0; i < sumSquaredColumn.size(); i++) {
+        u64 rowSum = 0;
+        for (u64 j = valuesStart; j < cols.columns.size(); j++) {
+            auto cdata = cols.columns[j].data();
+            rowSum += cdata[i];
+        }
+        sumSquaredColumn[i] = rowSum * rowSum;
+        total += sumSquaredColumn[i];
+    }
+
+    cols.columns.emplace_back(Column { std::move(sumSquaredColumn) });
+    cols.names.valueColNames.push_back("Sum^2");
+    return total;
+}
+
+} // namespace dbms

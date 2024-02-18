@@ -245,47 +245,12 @@
 
 #include <dbms.h>
 
-using namespace dbms;
-
 #include <unordered_map>
 #include <optional>
 #include <vector>
 
 int main() {
     dbms::initSubmodules();
-
-    // constexpr u64 N = 3;
-    // std::vector<ColumnGroup> columns (N);
-    // std::vector<ColumnNames> columnNames (N);
-
-    // {
-    //     columns[0].emplace_back(5, std::vector<u64>{199, 29, 399, 499, 59});
-    //     // columns[0].emplace_back(5, std::vector<u64>{2, 1, 2, 1, 2});
-    //     columns[0].emplace_back(5, std::vector<u64>{1, 1, 1, 1, 2});
-    //     columns[0].emplace_back(5, std::vector<u64>{11, 12, 13, 14, 15});
-    //     columns[0].emplace_back(5, std::vector<u64>{16, 17, 18, 19, 20});
-    //     columnNames[0].colNames = { "A", "C", "F" };
-    //     columnNames[0].valueColNames = { "value" };
-    // }
-    // {
-    //     columns[1].emplace_back(7, std::vector<u64>{100, 200, 300, 400, 500, 600, 700});
-    //     // columns[1].emplace_back(7, std::vector<u64>{1, 2, 2, 3, 2, 1, 2});
-    //     columns[1].emplace_back(7, std::vector<u64>{1, 2, 21, 13, 42, 13, 2});
-    //     columns[1].emplace_back(7, std::vector<u64>{99, 12, 13, 14, 15, 16, 17});
-    //     columns[1].emplace_back(7, std::vector<u64>{16, 17, 18, 19, 20, 21, 22});
-    //     columnNames[1].colNames = { "B", "C", "D" };
-    //     columnNames[1].valueColNames = { "value" };
-    // }
-    // {
-    //     columns[2].emplace_back(4, std::vector<u64>{16, 266, 366, 466});
-    //     columns[2].emplace_back(4, std::vector<u64>{6, 7, 8, 9});
-    //     columns[2].emplace_back(4, std::vector<u64>{16, 17, 18, 19});
-    //     columnNames[2].colNames = { "E", "F" };
-    //     columnNames[2].valueColNames = { "value" };
-    // }
-
-    // JoinResult result = hashJoin(columns[0], columns[1], columnNames[0], columnNames[1]);
-    // result = hashJoin(result.columns, columns[2], result.columnNames, columnNames[2]);
 
     return 0;
 }

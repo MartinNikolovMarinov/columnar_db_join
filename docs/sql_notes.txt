@@ -1,0 +1,184 @@
+# TEST 1
+
+    insert into AC (A, C, V)
+    values
+    (1, 1, 11),
+    (2, 1, 12),
+    (3, 1, 13),
+    (4, 2, 14),
+    (5, 3, 15),
+    (6, 2, 16),
+    (7, 1, 17)
+
+    insert into BC (B, C, V)
+    values
+    (8, 1, 18),
+    (9, 2, 19),
+    (10, 1, 20),
+    (11, 2, 21),
+    (12, 3, 22),
+    (13, 2, 23),
+    (14, 1, 24),
+    (15, 1, 25)
+
+
+    SELECT  ac.A as A,
+    		bc.B as B,
+            bc.C as C,
+            ac.V as Column1,
+            bc.V as Column2,
+            (ac.V + bc.V) * (ac.V + bc.V) as SumSquared
+    from AC as ac
+    inner join BC as bc on ac.C = bc.C
+    order by ac.A, bc.B, ac.C, ac.V, bc.V
+
+    A	B	C	Column1	Column2	SumSquared
+    1	8	1	11		18		841
+    1	10	1	11		20		961
+    1	14	1	11		24		1225
+    1	15	1	11		25		1296
+    2	8	1	12		18		900
+    2	10	1	12		20		1024
+    2	14	1	12		24		1296
+    2	15	1	12		25		1369
+    3	8	1	13		18		961
+    3	10	1	13		20		1089
+    3	14	1	13		24		1369
+    3	15	1	13		25		1444
+    4	9	2	14		19		1089
+    4	11	2	14		21		1225
+    4	13	2	14		23		1369
+    5	12	3	15		22		1369
+    6	9	2	16		19		1225
+    6	11	2	16		21		1369
+    6	13	2	16		23		1521
+    7	8	1	17		18		1225
+    7	10	1	17		20		1369
+    7	14	1	17		24		1681
+    7	15	1	17		25		1764
+
+# TEST 2
+
+    insert into ACE (A, C, E, V)
+    values
+    (10,  1, 2, 11),
+    (21,  1, 1, 22),
+    (32,  2, 1, 33),
+    (43,  3, 4, 44),
+    (54,  2, 1, 55),
+    (65,  4, 2, 66),
+    (76,  1, 3, 77),
+    (77,  2, 1, 88),
+    (18,  1, 1, 99),
+    (29,  1, 1, 1010),
+    (310, 1, 3, 1111),
+    (411, 1, 2, 1212),
+    (512, 2, 4, 1313),
+    (613, 3, 2, 1414),
+    (714, 2, 2, 1515),
+    (715, 4, 4, 1616)
+
+    insert into BCE (B, C, E, V)
+    values
+    (89, 3, 1, 144),
+    (71, 4, 4, 104),
+    (74, 3, 1, 16),
+    (08, 4, 3, 121),
+    (16, 2, 2, 44),
+    (70, 4, 4, 151),
+    (65, 1, 4, 33),
+    (33, 3, 4, 143),
+    (94, 4, 1, 51),
+    (23, 3, 1, 117),
+    (90, 1, 3, 198),
+    (90, 1, 1, 157),
+    (42, 1, 1, 120),
+    (93, 1, 2, 10),
+    (77, 2, 2, 46),
+    (24, 4, 1, 115)
+
+
+    SELECT  ace.A as A,
+    		bce.B as B,
+            bce.C as C,
+            bce.E as E,
+            ace.V as Column1,
+            bce.V as Column2,
+    		(ace.V + bce.V) * (ace.V + bce.V) as SumSquared
+    from ACE as ace
+    inner join BCE as bce on ace.C = bce.C and ace.E = bce.E
+    order by ace.A, bce.B, bce.C, bce.E, ace.V, bce.V
+
+    A	B	C	E	Column1	Column2	SumSquared
+    10	93	1	2	11		10 		441
+    18	42	1	1	99	    120		47961
+    18	90	1	1	99		157		65536
+    21	42	1	1	22		120		20164
+    21	90	1	1	22		157		32041
+    29	42	1	1	1010	120		1276900
+    29	90	1	1	1010	157		1361889
+    43	33	3	4	44		143		34969
+    76	90	1	3	77		198		75625
+    310	90	1	3	1111	198		1713481
+    411	93	1	2	1212	10		1493284
+    714	16	2	2	1515	44		2430481
+    714	77	2	2	1515	46		2436721
+    715	70	4	4	1616	151		3122289
+    715	71	4	4	1616	104		2958400
+
+# Test 3
+
+    insert into AB (A, B, V)
+    values
+    (42, 0, 1),
+    (42, 1, 3),
+    (42, 7, 5),
+    (42, 8, 5),
+    (85, 1, 3),
+    (86, 1, 7),
+    (86, 2, 0)
+
+    insert into BC (B, C, V)
+    values
+    (1, 9, 12),
+    (2, 6, 5)
+
+    insert into ACD (A, C, D, V)
+    values
+    (42, 9, 7, 4),
+    (42, 10, 8, 5),
+    (86, 2, 9, 17),
+    (86, 6, 10, 3),
+    (86, 9, 11, 19),
+    (86, 9, 17, 7),
+    (86, 32, 12, 5),
+    (92, 7, 13, 5)
+
+
+    select
+        ab.A,
+        ab.B,
+        bc.C,
+        acd.D,
+        ab.V as Column1,
+        bc.V as Column2,
+        acd.V as Column3,
+        (ab.V + bc.V + acd.V) * (ab.V + bc.V + acd.V) as "Sum^2"
+    from AB as ab
+    join BC as bc on bc.B = ab.B
+    join ACD as acd on ab.A = acd.A and bc.C = acd.C
+    order by ab.A, ab.B, acd.D, ab.V, bc.V, acd.V
+
+    A   B   C   D   Column1 Column2 Column3 Sum^2
+    42  1   9   7   3       12      4       361
+    86  1   9   11  7       12      19      1444
+    86  1   9   17  7       12      7       676
+    86  2   6   10  0       5       3       64
+
+
+
+# helper queries
+
+ALTER TABLE AC RENAME COLUMN B to C;
+
+DELETE FROM AC;
