@@ -72,7 +72,8 @@ set(src_files
     src/core/random.cpp
 
     src/dbms.cpp
-    src/data_source.cpp
+    src/hash_join.cpp
+    src/sort.cpp
 
     tools/generate.cpp
 )
@@ -110,6 +111,8 @@ if(BUILD_TESTS)
 
     set(test_src_files
         tests/t-index.cpp
+        tests/t-dbms.cpp
+        tests/t-hash_join.cpp
     )
 
     add_executable(${test_executable} ${src_files} ${test_src_files} test_main.cpp)

@@ -245,289 +245,46 @@
 
 #include <dbms.h>
 
+using namespace dbms;
+
 #include <unordered_map>
 #include <optional>
 #include <vector>
 
-struct DataSource {
-
-    DataSource() : m_size(0), m_src(nullptr) {}
-    DataSource(u64 size, const u64* src) : m_size(size), m_src(src) {}
-
-    inline u64 operator[](u64 idx) const {
-        Assert(idx < m_size, "Index out of bounds");
-        return m_src[idx];
-    }
-
-    inline u64 size() const {
-        return m_size;
-    }
-
-    inline bool empty() const {
-        return m_size == 0;
-    }
-
-private:
-    u64 m_size;
-    const u64* m_src;
-};
-
-struct Column {
-
-    Column() : m_size(0), m_mappedFile(nullptr) {}
-    Column(u64 size, const u64* mappedFile) : m_size(size), m_mappedFile(mappedFile) {}
-    Column(u64 size, std::vector<u64>&& inMemoryData) : m_size(size), m_inMemoryData(std::move(inMemoryData)) {}
-
-    inline DataSource data() const {
-        if (m_mappedFile != nullptr) {
-            return DataSource(m_size, m_mappedFile);
-        }
-        return DataSource(m_inMemoryData.size(), m_inMemoryData.data());
-    }
-
-    inline void append(u64 x) {
-        Assert(m_mappedFile == nullptr, "Cannot append to a column that is backed by a file");
-        m_inMemoryData.push_back(x);
-    }
-
-private:
-    u64 m_size;
-    const u64* m_mappedFile;
-    std::vector<u64> m_inMemoryData;
-};
-
-struct ColumnNames {
-    std::vector<std::string> colNames;
-    std::vector<std::string> valueColNames;
-};
-
-std::vector<std::pair<u64, u64>> createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to) {
-    std::vector<std::pair<u64, u64>> ttable;
-    for (u64 i = 0; i < from.colNames.size(); i++) {
-        for (u64 j = 0; j < to.colNames.size(); j++) {
-            if (from.colNames[i] == to.colNames[j]) {
-                ttable.push_back({ i, j });
-                break;
-            }
-        }
-    }
-    return ttable;
-}
-
-using ColumnGroup = std::vector<Column>;
-
-inline u64 readValueAt(ColumnGroup& columns, u64 columnIdx, u64 rowIdx) {
-    return columns[columnIdx].data()[rowIdx];
-}
-
-using IndexTranslationTable = std::vector<std::pair<u64, u64>>;
-
-struct JoinResult {
-    ColumnGroup columns;
-    ColumnNames names;
-};
-
-JoinResult createFromNames(const ColumnNames& a, const ColumnNames& b) {
-    JoinResult result;
-
-    for (u64 i = 0; i < a.colNames.size(); i++) {
-        core::push_back_unique(result.names.colNames, a.colNames[i]);
-    }
-
-    for (u64 i = 0; i < b.colNames.size(); i++) {
-        core::push_back_unique(result.names.colNames, b.colNames[i]);
-    }
-
-    std::sort(result.names.colNames.begin(), result.names.colNames.end());
-
-    for (u64 i = 0; i < a.valueColNames.size(); i++) {
-        result.names.valueColNames.emplace_back("Column" + std::to_string(a.valueColNames.size()));
-    }
-
-    for (u64 i = 0; i < b.valueColNames.size(); i++) {
-        result.names.valueColNames.emplace_back("Column" + std::to_string(a.valueColNames.size()));
-    }
-
-    result.columns.resize(result.names.colNames.size() + result.names.valueColNames.size());
-    return result;
-}
-
-void sortColumns(ColumnGroup& cols) {
-    if (cols.empty() || cols[0].data().empty()) return;
-
-    u64 numRows = cols[0].data().size();
-    std::vector<u64> indices(numRows);
-    for (u64 i = 0; i < numRows; ++i) {
-        indices[i] = i;
-    }
-
-    // Custom comparator to sort indices based on table row values
-    auto columnComparer = [&cols](u64 a, u64 b) {
-        for (const auto& column : cols) {
-            auto cdata = column.data();
-            if (cdata[a] != cdata[b]) return cdata[a] < cdata[b];
-        }
-        return false; // Equal rows
-    };
-
-    // Sort indices based on comparator
-    sort(indices.begin(), indices.end(), columnComparer);
-
-    // Rearrange each column based on sorted indices
-    for (auto& column : cols) {
-        std::vector<u64> sortedColumn(numRows);
-        // Column sortedColumn(numRows);
-        for (u64 i = 0; i < numRows; i++) {
-            auto cdata = column.data();
-            sortedColumn[i] = cdata[indices[i]];
-        }
-        column = Column(numRows, std::move(sortedColumn));
-    }
-}
-
-JoinResult hashJoin(const ColumnGroup& left,
-                    const ColumnGroup& right,
-                    const ColumnNames& leftColNames,
-                    const ColumnNames& rightColNames) {
-
-    auto leftToRightTranslationTable = createIndexTranslationTable(leftColNames, rightColNames);
-
-    if (leftToRightTranslationTable.empty()) {
-        logErr("No common columns found. Join is not possible.");
-        return JoinResult();
-    }
-
-    const u64 leftJoinIdx = leftToRightTranslationTable[0].first;
-    const u64 rightJoinIdx = leftToRightTranslationTable[0].second;
-
-    // Build phase
-
-    DataSource leftJoinColumnSrc = left[leftJoinIdx].data();
-    std::unordered_map<u64, std::vector<u64>> hashTable;
-    for (u64 i = 0; i < leftJoinColumnSrc.size(); i++) {
-        hashTable[leftJoinColumnSrc[i]].push_back(i);
-    }
-
-    // Probe phase
-
-    JoinResult result = createFromNames(leftColNames, rightColNames);
-    DataSource rightJoinColumnSrc = right[rightJoinIdx].data();
-
-    std::vector<std::pair<u64, u64>> columnWriteOrderForLeft;
-    std::vector<std::pair<u64, u64>> columnWriteOrderForRight;
-    // TODO: Make a function out of this:
-    {
-        std::vector<bool> used (result.names.colNames.size(), false);
-        for (u64 i = 0; i < leftColNames.colNames.size(); i++) {
-            const auto& leftCol = leftColNames.colNames[i];
-            for (u64 j = 0; j < result.names.colNames.size(); j++) {
-                if (result.names.colNames[j] == leftCol) {
-                    columnWriteOrderForLeft.push_back({ j, i });
-                    used[j] = true;
-                    break;
-                }
-            }
-        }
-
-        for (u64 i = 0; i < rightColNames.colNames.size(); i++) {
-            const auto& rightCol = rightColNames.colNames[i];
-            for (u64 j = 0; j < result.names.colNames.size(); j++) {
-                if (!used[j] && result.names.colNames[j] == rightCol) {
-                    columnWriteOrderForRight.push_back({ j, i });
-                    used[j] = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    u64 startOfValuesInLeft = leftColNames.colNames.size();
-    u64 startOfValuesInRight = rightColNames.colNames.size();
-    u64 startOfValuesInResult = result.names.colNames.size();
-
-    for (u64 rightRow = 0; rightRow < rightJoinColumnSrc.size(); rightRow++) {
-        auto x = rightJoinColumnSrc[rightRow];
-        auto it = hashTable.find(x);
-        if (it != hashTable.end()) {
-            for (auto& leftRow : it->second) {
-                // Check if any of the other common columns doesn't match.
-                bool match = true;
-                for (u64 i = 1; i < leftToRightTranslationTable.size(); i++) {
-                    auto& [leftColIdx, rightColIdx] = leftToRightTranslationTable[i];
-                    auto lds = left[leftColIdx].data();
-                    auto rds = right[rightColIdx].data();
-                    if (lds[leftRow] != rds[rightRow]) {
-                        match = false;
-                        break;
-                    }
-                }
-
-                if (match) {
-                    // Append the matching rows to the result.
-                    for (auto& [resultIdx, leftIdx] : columnWriteOrderForLeft) {
-                        auto lds = left[leftIdx].data();
-                        result.columns[resultIdx].append(lds[leftRow]);
-                    }
-                    for (auto& [resultIdx, rightIdx] : columnWriteOrderForRight) {
-                        auto rds = right[rightIdx].data();
-                        result.columns[resultIdx].append(rds[rightRow]);
-                    }
-
-                    u64 valueWriteIdx = startOfValuesInResult;
-                    for (u64 i = startOfValuesInLeft; i < left.size(); i++) {
-                        auto lds = left[i].data();
-                        result.columns[valueWriteIdx].append(lds[leftRow]);
-                        valueWriteIdx++;
-                    }
-                    for (u64 i = startOfValuesInRight; i < right.size(); i++) {
-                        auto rds = right[i].data();
-                        result.columns[valueWriteIdx].append(rds[rightRow]);
-                        valueWriteIdx++;
-                    }
-                }
-            }
-        }
-    }
-
-    sortColumns(result.columns);
-
-    return result;
-}
-
 int main() {
     dbms::initSubmodules();
 
-    constexpr u64 N = 3;
-    std::vector<ColumnGroup> columns (N);
-    std::vector<ColumnNames> columnNames (N);
+    // constexpr u64 N = 3;
+    // std::vector<ColumnGroup> columns (N);
+    // std::vector<ColumnNames> columnNames (N);
 
-    {
-        columns[0].emplace_back(5, std::vector<u64>{199, 29, 399, 499, 59});
-        // columns[0].emplace_back(5, std::vector<u64>{2, 1, 2, 1, 2});
-        columns[0].emplace_back(5, std::vector<u64>{1, 1, 1, 1, 2});
-        columns[0].emplace_back(5, std::vector<u64>{11, 12, 13, 14, 15});
-        columns[0].emplace_back(5, std::vector<u64>{16, 17, 18, 19, 20});
-        columnNames[0].colNames = { "A", "C", "F" };
-        columnNames[0].valueColNames = { "value" };
-    }
-    {
-        columns[1].emplace_back(7, std::vector<u64>{100, 200, 300, 400, 500, 600, 700});
-        // columns[1].emplace_back(7, std::vector<u64>{1, 2, 2, 3, 2, 1, 2});
-        columns[1].emplace_back(7, std::vector<u64>{1, 2, 21, 13, 42, 13, 2});
-        columns[1].emplace_back(7, std::vector<u64>{99, 12, 13, 14, 15, 16, 17});
-        columns[1].emplace_back(7, std::vector<u64>{16, 17, 18, 19, 20, 21, 22});
-        columnNames[1].colNames = { "B", "C", "D" };
-        columnNames[1].valueColNames = { "value" };
-    }
-    {
-        columns[2].emplace_back(4, std::vector<u64>{16, 266, 366, 466});
-        columns[2].emplace_back(4, std::vector<u64>{6, 7, 8, 9});
-        columns[2].emplace_back(4, std::vector<u64>{16, 17, 18, 19});
-        columnNames[2].colNames = { "E", "F" };
-        columnNames[2].valueColNames = { "value" };
-    }
+    // {
+    //     columns[0].emplace_back(5, std::vector<u64>{199, 29, 399, 499, 59});
+    //     // columns[0].emplace_back(5, std::vector<u64>{2, 1, 2, 1, 2});
+    //     columns[0].emplace_back(5, std::vector<u64>{1, 1, 1, 1, 2});
+    //     columns[0].emplace_back(5, std::vector<u64>{11, 12, 13, 14, 15});
+    //     columns[0].emplace_back(5, std::vector<u64>{16, 17, 18, 19, 20});
+    //     columnNames[0].colNames = { "A", "C", "F" };
+    //     columnNames[0].valueColNames = { "value" };
+    // }
+    // {
+    //     columns[1].emplace_back(7, std::vector<u64>{100, 200, 300, 400, 500, 600, 700});
+    //     // columns[1].emplace_back(7, std::vector<u64>{1, 2, 2, 3, 2, 1, 2});
+    //     columns[1].emplace_back(7, std::vector<u64>{1, 2, 21, 13, 42, 13, 2});
+    //     columns[1].emplace_back(7, std::vector<u64>{99, 12, 13, 14, 15, 16, 17});
+    //     columns[1].emplace_back(7, std::vector<u64>{16, 17, 18, 19, 20, 21, 22});
+    //     columnNames[1].colNames = { "B", "C", "D" };
+    //     columnNames[1].valueColNames = { "value" };
+    // }
+    // {
+    //     columns[2].emplace_back(4, std::vector<u64>{16, 266, 366, 466});
+    //     columns[2].emplace_back(4, std::vector<u64>{6, 7, 8, 9});
+    //     columns[2].emplace_back(4, std::vector<u64>{16, 17, 18, 19});
+    //     columnNames[2].colNames = { "E", "F" };
+    //     columnNames[2].valueColNames = { "value" };
+    // }
 
-    JoinResult result = hashJoin(columns[0], columns[1], columnNames[0], columnNames[1]);
+    // JoinResult result = hashJoin(columns[0], columns[1], columnNames[0], columnNames[1]);
     // result = hashJoin(result.columns, columns[2], result.columnNames, columnNames[2]);
 
     return 0;
