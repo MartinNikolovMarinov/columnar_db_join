@@ -237,8 +237,8 @@ void initSubmodules() {
 //     return true; // All tables have at least one matching column with another table, join is possible
 // }
 
-std::vector<std::pair<u64, u64>> createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to) {
-    std::vector<std::pair<u64, u64>> ttable;
+IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to) {
+    IndexTranslationTable ttable;
     for (u64 i = 0; i < from.colNames.size(); i++) {
         for (u64 j = 0; j < to.colNames.size(); j++) {
             if (from.colNames[i] == to.colNames[j]) {

@@ -4,37 +4,34 @@
 
 namespace dbms {
 
-JoinResult hashJoin(const ColumnGroup& left,
-                    const ColumnGroup& right,
-                    const ColumnNames& leftColNames,
-                    const ColumnNames& rightColNames) {
+namespace {
 
-    auto leftToRightTranslationTable = createIndexTranslationTable(leftColNames, rightColNames);
+using JoinHashMap = std::unordered_map<u64, std::vector<u64>>;
 
-    if (leftToRightTranslationTable.empty()) {
-        logErr("No common columns found. Join is not possible.");
-        return JoinResult();
+JoinHashMap buildPhase(DataSource colGroupSrc) {
+    JoinHashMap hashTable;
+
+    for (u64 i = 0; i < colGroupSrc.size(); i++) {
+        hashTable[colGroupSrc[i]].push_back(i);
     }
 
-    const u64 leftJoinIdx = leftToRightTranslationTable[0].first;
+    return hashTable;
+}
+
+JoinResult probePhase(const ColumnGroup& left,
+                      const ColumnGroup& right,
+                      const ColumnNames& leftColNames,
+                      const ColumnNames& rightColNames,
+                      const JoinHashMap& hashTable,
+                      const IndexTranslationTable& leftToRightTranslationTable) {
+
     const u64 rightJoinIdx = leftToRightTranslationTable[0].second;
-
-    // Build phase
-
-    DataSource leftJoinColumnSrc = left[leftJoinIdx].data();
-    std::unordered_map<u64, std::vector<u64>> hashTable;
-    for (u64 i = 0; i < leftJoinColumnSrc.size(); i++) {
-        hashTable[leftJoinColumnSrc[i]].push_back(i);
-    }
-
-    // Probe phase
 
     JoinResult result = JoinResult::createFromNames(leftColNames, rightColNames);
     DataSource rightJoinColumnSrc = right[rightJoinIdx].data();
 
     std::vector<std::pair<u64, u64>> columnWriteOrderForLeft;
     std::vector<std::pair<u64, u64>> columnWriteOrderForRight;
-    // TODO: Make a function out of this:
     {
         std::vector<bool> used (result.names.colNames.size(), false);
         for (u64 i = 0; i < leftColNames.colNames.size(); i++) {
@@ -108,6 +105,33 @@ JoinResult hashJoin(const ColumnGroup& left,
         }
     }
 
+    return result;
+}
+
+} // namespace
+
+
+JoinResult hashJoin(const ColumnGroup& left,
+                    const ColumnGroup& right,
+                    const ColumnNames& leftColNames,
+                    const ColumnNames& rightColNames) {
+
+    auto leftToRightTranslationTable = createIndexTranslationTable(leftColNames, rightColNames);
+
+    if (leftToRightTranslationTable.empty()) {
+        logErr("No common columns found. Join is not possible.");
+        return JoinResult();
+    }
+
+    // Build phase
+    const u64 leftJoinIdx = leftToRightTranslationTable[0].first;
+    auto joinColumnDataSrc = left[leftJoinIdx].data();
+    auto hashTable = buildPhase(joinColumnDataSrc);
+
+    // Probe phase
+    auto result = probePhase(left, right, leftColNames, rightColNames, hashTable, leftToRightTranslationTable);
+
+    // Sort phase
     sortColumns(result.columns);
 
     return result;
