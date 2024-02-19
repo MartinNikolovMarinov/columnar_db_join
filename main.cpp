@@ -10,7 +10,7 @@ int main() {
     initSubmodules();
 
     Database db;
-    if (!loadDatabase(DBMS_DATA_PATH"/small-example", db)) {
+    if (!loadDatabase(DBMS_DATA_PATH"/t1-example", db)) {
         logFatal("Failed to load database");
         return 1;
     }

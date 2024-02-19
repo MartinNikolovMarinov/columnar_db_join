@@ -9,6 +9,8 @@ namespace {
 using JoinHashMap = std::unordered_map<u64, std::vector<u64>>;
 
 JoinHashMap buildPhase(DataSource colGroupSrc) {
+    TRACE_BLOCK_CPU_TIME("buildPhase");
+
     JoinHashMap hashTable;
 
     for (u64 i = 0; i < colGroupSrc.size(); i++) {
@@ -24,6 +26,7 @@ JoinResult probePhase(const ColumnGroup& left,
                       const ColumnNames& rightColNames,
                       const JoinHashMap& hashTable,
                       const IndexTranslationTable& leftToRightTranslationTable) {
+    TRACE_BLOCK_CPU_TIME("probePhase");
 
     const u64 rightJoinIdx = leftToRightTranslationTable[0].second;
 
@@ -55,6 +58,8 @@ JoinResult hashJoin(const ColumnGroup& left,
                     const ColumnGroup& right,
                     const ColumnNames& leftColNames,
                     const ColumnNames& rightColNames) {
+
+    TRACE_BLOCK_CPU_TIME("hashJoin");
 
     auto leftToRightTranslationTable = createIndexTranslationTable(leftColNames, rightColNames);
 

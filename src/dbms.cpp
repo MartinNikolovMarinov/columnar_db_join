@@ -25,6 +25,8 @@ void initSubmodules() {
 }
 
 bool loadDatabase(const char* path, Database& db) {
+    TRACE_BLOCK_CPU_TIME("Loading database took");
+
     namespace fs = std::filesystem;
     constexpr const char* COLUMN_PREFIX = Database::DBMS_DATA_COLUMN_PREFIX.data();
 
