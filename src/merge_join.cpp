@@ -6,6 +6,7 @@ JoinResult mergeJoin(const ColumnGroup& left,
                      const ColumnGroup& right,
                      const ColumnNames& leftColNames,
                      const ColumnNames& rightColNames) {
+    TRACE_BLOCK_CPU_TIME("mergeJoin");
 
     JoinResult result = JoinResult::createFromNames(leftColNames, rightColNames);
 

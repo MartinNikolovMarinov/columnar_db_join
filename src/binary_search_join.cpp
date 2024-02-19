@@ -32,6 +32,8 @@ JoinResult binarySearchJoin(const ColumnGroup& left,
                             const ColumnGroup& right,
                             const ColumnNames& leftColNames,
                             const ColumnNames& rightColNames) {
+    TRACE_BLOCK_CPU_TIME("binarySearchJoin");
+
     i64 joinIdxLeft = -1;
     constexpr u64 joinIdxRight = 0;
 

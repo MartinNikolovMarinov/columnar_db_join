@@ -20,7 +20,7 @@
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
 				"CORE_ASSERT_ENABLED": "ON",
-				"BUILD_TESTS": "OFF"
+				"BUILD_TESTS": "ON"
 			}
 		}
 	]

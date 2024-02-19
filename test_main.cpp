@@ -4,7 +4,7 @@
 int main() {
     using namespace dbms;
 
-    initSubmodules();
+    initSubmodules(core::LogLevel::L_WARNING);
 
     i32 exitCode = runAllTests();
 

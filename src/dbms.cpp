@@ -6,8 +6,8 @@
 
 namespace dbms {
 
-void initSubmodules() {
-    core::initLoggingSystem(core::LogLevel::L_TRACE, nullptr, 0);
+void initSubmodules(core::LogLevel logLevel) {
+    core::initLoggingSystem(logLevel, nullptr, 0);
     core::rndInit();
 
     core::setGlobalAssertHandler([](const char* failedExpr, const char* file, i32 line, const char* funcName, const char* errMsg) {
@@ -338,6 +338,8 @@ bool checkSecondaryKeys(const ColumnNames& leftColNames,
 }
 
 u64 sumSquared(JoinResult& cols) {
+    TRACE_BLOCK_CPU_TIME("sumSquared");
+
     if (cols.columns.empty()) return 0;
 
     u64 valuesStart = cols.names.colNames.size();

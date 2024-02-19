@@ -20,7 +20,7 @@ using ColumnGroup = std::vector<Column>;
 using IndexTranslationTable = std::vector<std::pair<u64, u64>>;
 using WriteOrder = std::pair<IndexTranslationTable, IndexTranslationTable>;
 
-void initSubmodules();
+void initSubmodules(core::LogLevel logLevel = core::LogLevel::L_TRACE);
 void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNames);
 
 struct DataSource {

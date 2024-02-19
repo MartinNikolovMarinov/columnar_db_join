@@ -19,15 +19,14 @@ int main() {
     //     debug_printColumnGroup(table.columns, table.names);
     // }
 
-    dbms::JoinResult result = dbms::hashJoin(db.tables[0].columns, db.tables[1].columns,
-                                             db.tables[0].names, db.tables[1].names);
+    dbms::JoinResult result = dbms::mergeJoin(db.tables[0].columns, db.tables[1].columns, db.tables[0].names, db.tables[1].names);
     for (u64 i = 2; i < db.tables.size(); i++) {
-        result = dbms::hashJoin(result.columns, db.tables[i].columns, result.names, db.tables[i].names);
+        result = dbms::binarySearchJoin(result.columns, db.tables[i].columns, result.names, db.tables[i].names);
     }
 
     u64 totalSum = dbms::sumSquared(result);
 
-    debug_printColumnGroup(result.columns, result.names);
+    // debug_printColumnGroup(result.columns, result.names);
     logInfo("Total sum of squared values: %llu", totalSum);
 
     return 0;
