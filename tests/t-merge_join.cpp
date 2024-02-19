@@ -11,7 +11,7 @@ i32 mergeJoinOnTwoColumnGroups() {
         u64 expectedSumSquared;
     };
 
-    constexpr const u64 N = 3;
+    constexpr const u64 N = 4;
     std::vector<TestCase> tests (N);
 
     {
@@ -143,6 +143,41 @@ i32 mergeJoinOnTwoColumnGroups() {
         tests[2].expectedSumSquared = 24438;
     }
 
+    {
+        tests[3].left = {
+            dbms::Column { std::vector<u64>{ 1, 1, 1, 1, 1, 1, 1, 1 } },
+            dbms::Column { std::vector<u64>{ 2, 2, 2, 2, 2, 2, 2, 2 } },
+            dbms::Column { std::vector<u64>{ 3, 3, 3, 3, 3, 3, 3, 3 } },
+            dbms::Column { std::vector<u64>{ 4, 4, 4, 4, 4, 4, 4, 4 } },
+        };
+        tests[3].leftColNames.colNames = { "A", "B", "C" };
+        tests[3].leftColNames.valueColNames = { "value" };
+
+        tests[3].right = {
+            dbms::Column { std::vector<u64>{ 1, 1 } },
+            dbms::Column { std::vector<u64>{ 2, 2 } },
+            dbms::Column { std::vector<u64>{ 3, 3 } },
+            dbms::Column { std::vector<u64>{ 4, 4 } },
+        };
+        tests[3].rightColNames.colNames = {  "A", "B", "C"  };
+        tests[3].rightColNames.valueColNames = { "value" };
+
+        tests[3].expected = dbms::JoinResult {
+            dbms::ColumnGroup {
+                dbms::Column { std::vector<u64>{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 } },
+                dbms::Column { std::vector<u64>{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 } },
+                dbms::Column { std::vector<u64>{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 } },
+                dbms::Column { std::vector<u64>{ 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 } },
+                dbms::Column { std::vector<u64>{ 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 } },
+            },
+            dbms::ColumnNames { { "A", "B", "C"  }, { "Column1", "Column2" } },
+        };
+        tests[3].expectedSumSquaredCol = dbms::Column {
+            std::vector<u64>{ 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64 }
+        };
+        tests[3].expectedSumSquared = 1024;
+    }
+
     for (auto& t : tests) {
         auto result = dbms::mergeJoin(t.left, t.right, t.leftColNames, t.rightColNames);
 
@@ -161,5 +196,6 @@ i32 mergeJoinOnTwoColumnGroups() {
 
 i32 runMergeJoinTestsSuite() {
     RunTest(mergeJoinOnTwoColumnGroups);
+    // TODO: Test joining multiple column groups.
     return 0;
 }
