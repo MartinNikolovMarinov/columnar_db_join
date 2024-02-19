@@ -320,6 +320,44 @@
 
     expected total is 93553260
 
+# Test 5
+
+    insert into AB (A, B, V)
+    values
+    (1, 2, 11)
+    (1, 3, 12)
+    (1, 7, 13)
+    (3, 8, 14)
+
+    insert into AC (A, C, V)
+    values
+    (1, 2, 15),
+    (1, 3, 16),
+    (2, 4, 17),
+    (3, 5, 18)
+
+    select
+        ab.A,
+        ab.B,
+        ac.C,
+        ab.V as Column1,
+        ac.V as Column2,
+        (ab.V + ac.V) * (ab.V + ac.V) as "Sum^2"
+    from AB as ab
+    join Ac as ac on ab.A = ac.A
+    order by ab.A, ab.B, ac.C, ab.V, ac.V
+
+    A	B	C	Column1	Column2	Sum^2
+    1	2	2	11	    15	    676
+    1	2	3	11	    16	    729
+    1	3	2	12	    15	    729
+    1	3	3	12	    16	    784
+    1	7	2	13	    15	    784
+    1	7	3	13	    16	    841
+    3	8	5	14	    18	    1024
+
+    expected total is 5567
+
 # helper queries
 
 ALTER TABLE AC RENAME COLUMN B to C;

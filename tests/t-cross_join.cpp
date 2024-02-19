@@ -54,6 +54,7 @@ i32 crossJoinOnTwoColumnGroups() {
         };
         tests[0].expectedSumSquared = 4219;
     }
+
     {
         tests[1].left = {
             dbms::Column { std::vector<u64>{1, 8} },
@@ -104,6 +105,7 @@ i32 crossJoinOnTwoColumnGroups() {
         };
         tests[1].expectedSumSquared = 1254;
     }
+
     {
         // NOTE: This is the Corner case example in db.
 

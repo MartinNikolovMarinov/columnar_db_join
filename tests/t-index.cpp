@@ -6,6 +6,7 @@ i32 runAllTests() {
     RunTestSuite(runDBMSTestsSuite);
     RunTestSuite(runHashJoinTestsSuite);
     RunTestSuite(runCrossJoinTestsSuite);
+    RunTestSuite(runMergeJoinTestsSuite);
 
     return 0;
 }

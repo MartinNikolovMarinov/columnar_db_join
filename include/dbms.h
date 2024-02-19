@@ -95,11 +95,6 @@ struct JoinResult {
 
 u64 sumSquared(JoinResult& cols);
 
-// void loadDatabase(const char* path, Database& db);
-// void debug_printTable(dbms::Table& table);
-
-// std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables);
-
 /**
  * @brief Create a translation table to translate the index of the source table to the index of the destination table.
  *        This function assumes that the source and destination tables are sorted lexically.
@@ -122,6 +117,11 @@ JoinResult hashJoin(const ColumnGroup& left,
                     const ColumnNames& rightColNames);
 
 JoinResult crossJoin(const ColumnGroup& left,
+                     const ColumnGroup& right,
+                     const ColumnNames& leftColNames,
+                     const ColumnNames& rightColNames);
+
+JoinResult mergeJoin(const ColumnGroup& left,
                      const ColumnGroup& right,
                      const ColumnNames& leftColNames,
                      const ColumnNames& rightColNames);
