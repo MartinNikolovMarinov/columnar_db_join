@@ -30,52 +30,16 @@ JoinResult probePhase(const ColumnGroup& left,
     JoinResult result = JoinResult::createFromNames(leftColNames, rightColNames);
     DataSource rightJoinColumnSrc = right[rightJoinIdx].data();
 
-    const auto& writeOrder = createTableWriteOrder(leftColNames, rightColNames, result.names);
-
-    u64 startOfValuesInLeft = leftColNames.colNames.size();
-    u64 startOfValuesInRight = rightColNames.colNames.size();
-    u64 startOfValuesInResult = result.names.colNames.size();
-
     for (u64 rightRow = 0; rightRow < rightJoinColumnSrc.size(); rightRow++) {
         auto x = rightJoinColumnSrc[rightRow];
         auto it = hashTable.find(x);
         if (it != hashTable.end()) {
             for (auto& leftRow : it->second) {
 
-                // Check if any of the other common columns doesn't match.
-                bool match = true;
-                for (u64 i = 1; i < leftToRightTranslationTable.size(); i++) {
-                    auto& [leftColIdx, rightColIdx] = leftToRightTranslationTable[i];
-                    auto lds = left[leftColIdx].data();
-                    auto rds = right[rightColIdx].data();
-                    if (lds[leftRow] != rds[rightRow]) {
-                        match = false;
-                        break;
-                    }
-                }
+                bool match = dbms::checkSecondaryKeys(leftColNames, rightColNames, left, right, leftRow, rightRow);
 
                 if (match) {
-                    // Append the matching rows to the result.
-                    for (auto& [resultIdx, leftIdx] : writeOrder.first) {
-                        auto lds = left[leftIdx].data();
-                        result.columns[resultIdx].append(lds[leftRow]);
-                    }
-                    for (auto& [resultIdx, rightIdx] : writeOrder.second) {
-                        auto rds = right[rightIdx].data();
-                        result.columns[resultIdx].append(rds[rightRow]);
-                    }
-
-                    u64 valueWriteIdx = startOfValuesInResult;
-                    for (u64 i = startOfValuesInLeft; i < left.size(); i++) {
-                        auto lds = left[i].data();
-                        result.columns[valueWriteIdx].append(lds[leftRow]);
-                        valueWriteIdx++;
-                    }
-                    for (u64 i = startOfValuesInRight; i < right.size(); i++) {
-                        auto rds = right[i].data();
-                        result.columns[valueWriteIdx].append(rds[rightRow]);
-                        valueWriteIdx++;
-                    }
+                    dbms::appendRowToResult(result, leftColNames, rightColNames, left, right, leftRow, rightRow);
                 }
             }
         }

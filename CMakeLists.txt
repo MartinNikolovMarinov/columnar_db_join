@@ -76,6 +76,7 @@ set(src_files
     src/hash_join.cpp
     src/cross_join.cpp
     src/merge_join.cpp
+    src/binary_search_join.cpp
 
     tools/generate.cpp
 )

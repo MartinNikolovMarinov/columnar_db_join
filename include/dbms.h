@@ -95,6 +95,18 @@ struct JoinResult {
 
 u64 sumSquared(JoinResult& cols);
 
+void appendRowToResult(JoinResult& result,
+                       const ColumnNames& leftColNames,
+                       const ColumnNames& rightColNames,
+                       const ColumnGroup& left,
+                       const ColumnGroup& right,
+                       u64 leftRowIdx, u64 rightRowIdx);
+
+bool checkSecondaryKeys(const ColumnNames& leftColNames,
+                        const ColumnNames& rightColNames,
+                        const ColumnGroup& left,
+                        const ColumnGroup& right,
+                        u64 leftRowIdx, u64 rightRowIdx);
 /**
  * @brief Create a translation table to translate the index of the source table to the index of the destination table.
  *        This function assumes that the source and destination tables are sorted lexically.
@@ -125,5 +137,10 @@ JoinResult mergeJoin(const ColumnGroup& left,
                      const ColumnGroup& right,
                      const ColumnNames& leftColNames,
                      const ColumnNames& rightColNames);
+
+JoinResult binarySearchJoin(const ColumnGroup& left,
+                            const ColumnGroup& right,
+                            const ColumnNames& leftColNames,
+                            const ColumnNames& rightColNames);
 
 } // namespace dbms
