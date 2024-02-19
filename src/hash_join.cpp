@@ -30,32 +30,7 @@ JoinResult probePhase(const ColumnGroup& left,
     JoinResult result = JoinResult::createFromNames(leftColNames, rightColNames);
     DataSource rightJoinColumnSrc = right[rightJoinIdx].data();
 
-    std::vector<std::pair<u64, u64>> columnWriteOrderForLeft;
-    std::vector<std::pair<u64, u64>> columnWriteOrderForRight;
-    {
-        std::vector<bool> used (result.names.colNames.size(), false);
-        for (u64 i = 0; i < leftColNames.colNames.size(); i++) {
-            const auto& leftCol = leftColNames.colNames[i];
-            for (u64 j = 0; j < result.names.colNames.size(); j++) {
-                if (result.names.colNames[j] == leftCol) {
-                    columnWriteOrderForLeft.push_back({ j, i });
-                    used[j] = true;
-                    break;
-                }
-            }
-        }
-
-        for (u64 i = 0; i < rightColNames.colNames.size(); i++) {
-            const auto& rightCol = rightColNames.colNames[i];
-            for (u64 j = 0; j < result.names.colNames.size(); j++) {
-                if (!used[j] && result.names.colNames[j] == rightCol) {
-                    columnWriteOrderForRight.push_back({ j, i });
-                    used[j] = true;
-                    break;
-                }
-            }
-        }
-    }
+    const auto& writeOrder = createTableWriteOrder(leftColNames, rightColNames, result.names);
 
     u64 startOfValuesInLeft = leftColNames.colNames.size();
     u64 startOfValuesInRight = rightColNames.colNames.size();
@@ -66,6 +41,7 @@ JoinResult probePhase(const ColumnGroup& left,
         auto it = hashTable.find(x);
         if (it != hashTable.end()) {
             for (auto& leftRow : it->second) {
+
                 // Check if any of the other common columns doesn't match.
                 bool match = true;
                 for (u64 i = 1; i < leftToRightTranslationTable.size(); i++) {
@@ -80,11 +56,11 @@ JoinResult probePhase(const ColumnGroup& left,
 
                 if (match) {
                     // Append the matching rows to the result.
-                    for (auto& [resultIdx, leftIdx] : columnWriteOrderForLeft) {
+                    for (auto& [resultIdx, leftIdx] : writeOrder.first) {
                         auto lds = left[leftIdx].data();
                         result.columns[resultIdx].append(lds[leftRow]);
                     }
-                    for (auto& [resultIdx, rightIdx] : columnWriteOrderForRight) {
+                    for (auto& [resultIdx, rightIdx] : writeOrder.second) {
                         auto rds = right[rightIdx].data();
                         result.columns[resultIdx].append(rds[rightRow]);
                     }
@@ -119,7 +95,11 @@ JoinResult hashJoin(const ColumnGroup& left,
     auto leftToRightTranslationTable = createIndexTranslationTable(leftColNames, rightColNames);
 
     if (leftToRightTranslationTable.empty()) {
-        logErr("No common columns found. Join is not possible.");
+        logErr("No common columns found. Hash join is not possible.");
+        return JoinResult();
+    }
+    if (left.empty() || right.empty()) {
+        logErr("One of the tables is empty. Hash join is not possible.");
         return JoinResult();
     }
 
@@ -130,9 +110,6 @@ JoinResult hashJoin(const ColumnGroup& left,
 
     // Probe phase
     auto result = probePhase(left, right, leftColNames, rightColNames, hashTable, leftToRightTranslationTable);
-
-    // Sort phase
-    sortColumns(result.columns);
 
     return result;
 }

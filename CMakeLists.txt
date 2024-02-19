@@ -74,7 +74,7 @@ set(src_files
     src/dbms.cpp
     src/hash_join.cpp
     src/sort.cpp
-    src/nested_loop_join.cpp
+    src/cross_join.cpp
 
     tools/generate.cpp
 )
@@ -114,6 +114,7 @@ if(BUILD_TESTS)
         tests/t-index.cpp
         tests/t-dbms.cpp
         tests/t-hash_join.cpp
+        tests/t-cross_join.cpp
     )
 
     add_executable(${test_executable} ${src_files} ${test_src_files} test_main.cpp)

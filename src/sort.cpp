@@ -2,7 +2,7 @@
 
 namespace dbms {
 
-void sortColumns(ColumnGroup& cols) {
+void sortDataInColumns(ColumnGroup& cols) {
     if (cols.empty() || cols[0].data().empty()) return;
 
     u64 numRows = cols[0].data().size();

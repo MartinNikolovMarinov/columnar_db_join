@@ -223,6 +223,35 @@ IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const
     return ttable;
 }
 
+WriteOrder createTableWriteOrder(const ColumnNames& a, const ColumnNames& b, const ColumnNames& unique) {
+    WriteOrder writeOrder;
+    std::vector<bool> used (unique.colNames.size(), false);
+
+    for (u64 i = 0; i < a.colNames.size(); i++) {
+        const auto& leftCol = a.colNames[i];
+        for (u64 j = 0; j < unique.colNames.size(); j++) {
+            if (unique.colNames[j] == leftCol) {
+                writeOrder.first.push_back({ j, i });
+                used[j] = true;
+                break;
+            }
+        }
+    }
+
+    for (u64 i = 0; i < b.colNames.size(); i++) {
+        const auto& rightCol = b.colNames[i];
+        for (u64 j = 0; j < unique.colNames.size(); j++) {
+            if (!used[j] && unique.colNames[j] == rightCol) {
+                writeOrder.second.push_back({ j, i });
+                used[j] = true;
+                break;
+            }
+        }
+    }
+
+    return writeOrder;
+}
+
 JoinResult JoinResult::createFromNames(const ColumnNames& a, const ColumnNames& b) {
     JoinResult result;
 

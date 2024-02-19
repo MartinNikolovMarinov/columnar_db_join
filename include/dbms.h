@@ -15,24 +15,25 @@ struct JoinResult;
 
 using ColumnGroup = std::vector<Column>;
 using IndexTranslationTable = std::vector<std::pair<u64, u64>>;
+using WriteOrder = std::pair<IndexTranslationTable, IndexTranslationTable>;
 
 void initSubmodules();
 
 struct DataSource {
 
-    DataSource() : m_size(0), m_src(nullptr) {}
-    DataSource(u64 size, const u64* src) : m_size(size), m_src(src) {}
+    constexpr DataSource() : m_size(0), m_src(nullptr) {}
+    constexpr DataSource(u64 size, const u64* src) : m_size(size), m_src(src) {}
 
-    inline u64 operator[](u64 idx) const {
+    constexpr inline u64 operator[](u64 idx) const {
         Assert(idx < m_size, "Index out of bounds");
         return m_src[idx];
     }
 
-    inline u64 size() const {
+    constexpr inline u64 size() const {
         return m_size;
     }
 
-    inline bool empty() const {
+    constexpr inline bool empty() const {
         return m_size == 0;
     }
 
@@ -67,6 +68,11 @@ struct Column {
         Assert(m_mappedFile == nullptr, "Cannot append to a column that is backed by a file");
         m_inMemoryData.push_back(x);
         m_size++;
+    }
+
+    inline void reserve(u64 size) {
+        Assert(m_mappedFile == nullptr, "Cannot reserve space for a column that is backed by a file");
+        m_inMemoryData.reserve(size);
     }
 
 private:
@@ -106,11 +112,18 @@ u64 sumSquared(JoinResult& cols);
 */
 IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to);
 
+WriteOrder createTableWriteOrder(const ColumnNames& a, const ColumnNames& b, const ColumnNames& unique);
+
+void sortDataInColumns(ColumnGroup& cols);
+
 JoinResult hashJoin(const ColumnGroup& left,
                     const ColumnGroup& right,
                     const ColumnNames& leftColNames,
                     const ColumnNames& rightColNames);
 
-void sortColumns(ColumnGroup& cols);
+JoinResult crossJoin(const ColumnGroup& left,
+                     const ColumnGroup& right,
+                     const ColumnNames& leftColNames,
+                     const ColumnNames& rightColNames);
 
 } // namespace dbms

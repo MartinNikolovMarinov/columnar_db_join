@@ -1,20 +1,5 @@
 #include "t-index.h"
 
-void assertColumns(const dbms::Column& a, const dbms::Column& b) {
-    auto adata = a.data();
-    auto bdata = b.data();
-    Assert(adata.size() == bdata.size(), "Column size mismatch");
-    for (u64 j = 0; j < adata.size(); j++) {
-        Assert(adata[j] == bdata[j], "Column data mismatch");
-    }
-}
-
-void assertColumns(const dbms::ColumnGroup& a, const dbms::ColumnGroup& b) {
-    for (u64 i = 0; i < a.size(); i++) {
-        assertColumns(a[i], b[i]);
-    }
-}
-
 i32 hashJoinOnTwoColumnGroups() {
     struct TestCase {
         dbms::ColumnGroup left;
@@ -126,11 +111,15 @@ i32 hashJoinOnTwoColumnGroups() {
 
     for (auto& t : tests) {
         auto result = dbms::hashJoin(t.left, t.right, t.leftColNames, t.rightColNames);
+
+        sortDataInColumns(result.columns);
+
         Assert(result.names.colNames == t.expected.names.colNames, "Column names mismatch");
         Assert(result.names.valueColNames == t.expected.names.valueColNames, "Value column names mismatch");
         assertColumns(result.columns, t.expected.columns);
 
         u64 totalSumSquared = dbms::sumSquared(result);
+
         Assert(totalSumSquared == t.expectedSumSquared, "Sum squared mismatch");
         assertColumns(result.columns.back(), t.expectedSumSquaredCol);
     }
@@ -206,11 +195,14 @@ i32 hashJoinOnMultipleColumnGroups() {
             result = dbms::hashJoin(result.columns, t.sequence[i], result.names, t.sequenceColNames[i]);
         }
 
+        sortDataInColumns(result.columns);
+
         Assert(result.names.colNames == t.expected.names.colNames, "Column names mismatch");
         Assert(result.names.valueColNames == t.expected.names.valueColNames, "Value column names mismatch");
         assertColumns(result.columns, t.expected.columns);
 
         u64 totalSumSquared = dbms::sumSquared(result);
+
         Assert(totalSumSquared == t.expectedSumSquared, "Sum squared mismatch");
         assertColumns(result.columns.back(), t.expectedSumSquaredCol);
     }
