@@ -7,6 +7,7 @@ i32 runAllTests() {
     RunTestSuite(runHashJoinTestsSuite);
     RunTestSuite(runCrossJoinTestsSuite);
     RunTestSuite(runMergeJoinTestsSuite);
+    RunTestSuite(runBinarySearchJoinTestsSute);
 
     return 0;
 }

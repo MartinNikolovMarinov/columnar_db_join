@@ -1,6 +1,10 @@
 #include "t-index.h"
 
-i32 hashJoinOnTwoColumnGroups() {
+#include "t-index.h"
+
+#include <cmath>
+
+i32 binarySearchJoinOnTwoColumnGroups() {
     struct TestCase {
         dbms::ColumnGroup left;
         dbms::ColumnGroup right;
@@ -11,108 +15,56 @@ i32 hashJoinOnTwoColumnGroups() {
         u64 expectedSumSquared;
     };
 
-    constexpr const u64 N = 2;
+    constexpr const u64 N = 1;
     std::vector<TestCase> tests (N);
 
-    // Test Case 1
     {
         tests[0].left = {
-            dbms::Column { std::vector<u64>{1, 2, 3, 4, 5, 6, 7} },
-            dbms::Column { std::vector<u64>{1, 1, 1, 2, 3, 2, 1} },
-            dbms::Column { std::vector<u64>{11, 12, 13, 14, 15, 16, 17} },
+            dbms::Column { std::vector<u64>{1, 1, 1, 3} },
+            dbms::Column { std::vector<u64>{2, 3, 7, 8} },
+            dbms::Column { std::vector<u64>{11, 12, 13, 14} },
         };
-        tests[0].leftColNames.colNames = { "A", "C" };
+        tests[0].leftColNames.colNames = { "A", "B" };
         tests[0].leftColNames.valueColNames = { "value" };
 
         tests[0].right = {
-            dbms::Column { std::vector<u64>{8, 9, 10, 11, 12, 13, 14, 15} },
-            dbms::Column { std::vector<u64>{1, 2, 1, 2, 3, 2, 1, 1} },
-            dbms::Column { std::vector<u64>{18, 19, 20, 21, 22, 23, 24, 25} },
+            dbms::Column { std::vector<u64>{1, 1, 2, 3} },
+            dbms::Column { std::vector<u64>{2, 3, 4, 5} },
+            dbms::Column { std::vector<u64>{15, 16, 17, 18} },
         };
-        tests[0].rightColNames.colNames = { "B", "C" };
+        tests[0].rightColNames.colNames = { "A", "C" };
         tests[0].rightColNames.valueColNames = { "value" };
 
         tests[0].expected = dbms::JoinResult {
             dbms::ColumnGroup {
                 dbms::Column {
-                    std::vector<u64> { 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 7, 7, 7, 7 }
+                    std::vector<u64> {1, 1, 1, 1, 1, 1, 3}
                 },
                 dbms::Column {
-                    std::vector<u64> { 8, 10, 14, 15, 8, 10, 14, 15, 8, 10, 14, 15, 9, 11, 13, 12, 9, 11, 13, 8, 10, 14, 15 }
+                    std::vector<u64> {2, 2, 3, 3, 7, 7, 8}
                 },
                 dbms::Column {
-                    std::vector<u64> { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 2, 2, 2, 1, 1, 1, 1 }
+                    std::vector<u64> {2, 3, 2, 3, 2, 3, 5}
                 },
                 dbms::Column {
-                    std::vector<u64> { 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 15, 16, 16, 16, 17, 17, 17, 17 }
+                    std::vector<u64> {11, 11, 12, 12, 13, 13, 14}
                 },
                 dbms::Column {
-                    std::vector<u64> { 18, 20, 24, 25, 18, 20, 24, 25, 18, 20, 24, 25, 19, 21, 23, 22, 19, 21, 23, 18, 20, 24, 25 }
+                    std::vector<u64> {15, 16, 15, 16, 15, 16, 18}
                 },
             },
             dbms::ColumnNames { { "A", "B", "C" }, { "Column1", "Column2" } },
         };
-
         tests[0].expectedSumSquaredCol = dbms::Column {
-            std::vector<u64>{ 841, 961, 1225, 1296, 900, 1024, 1296, 1369, 961, 1089, 1369, 1444, 1089, 1225, 1369, 1369, 1225, 1369, 1521, 1225, 1369, 1681, 1764 }
+            std::vector<u64>{ 676, 729, 729, 784, 784, 841, 1024 }
         };
-        tests[0].expectedSumSquared = 28981;
-    }
-
-    // Test Case 2
-    {
-        tests[1].left = {
-            dbms::Column { std::vector<u64>{10, 21, 32, 43, 54, 65, 76, 77, 18, 29, 310, 411, 512, 613, 714, 715} },
-            dbms::Column { std::vector<u64>{1, 1, 2, 3, 2, 4, 1, 2, 1, 1, 1, 1, 2, 3, 2, 4} },
-            dbms::Column { std::vector<u64>{2, 1, 1, 4, 1, 2, 3, 1, 1, 1, 3, 2, 4, 2, 2, 4} },
-            dbms::Column { std::vector<u64>{11, 22, 33, 44, 55, 66, 77, 88, 99, 1010, 1111, 1212, 1313, 1414, 1515, 1616} },
-        };
-        tests[1].leftColNames.colNames = { "A", "C", "E" };
-        tests[1].leftColNames.valueColNames = { "value" };
-
-        tests[1].right = {
-            dbms::Column { std::vector<u64>{89, 71, 74, 8, 16, 70, 65, 33, 94, 23, 90, 90, 42, 93, 77, 24} },
-            dbms::Column { std::vector<u64>{3, 4, 3, 4, 2, 4, 1, 3, 4, 3, 1, 1, 1, 1, 2, 4} },
-            dbms::Column { std::vector<u64>{1, 4, 1, 3, 2, 4, 4, 4, 1, 1, 3, 1, 1, 2, 2, 1} },
-            dbms::Column { std::vector<u64>{144, 104, 16, 121, 44, 151, 33, 143, 51, 117, 198, 157, 120, 10, 46, 115} },
-        };
-        tests[1].rightColNames.colNames = { "B", "C", "E" };
-        tests[1].rightColNames.valueColNames = { "value" };
-
-        tests[1].expected = dbms::JoinResult {
-            dbms::ColumnGroup {
-                dbms::Column {
-                    std::vector<u64> { 10, 18, 18, 21, 21, 29, 29, 43, 76, 310, 411, 714, 714, 715, 715 },
-                },
-                dbms::Column {
-                    std::vector<u64> { 93, 42, 90, 42, 90, 42, 90, 33, 90, 90, 93, 16, 77, 70, 71 },
-                },
-                dbms::Column {
-                    std::vector<u64> { 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 2, 2, 4, 4 },
-                },
-                dbms::Column {
-                    std::vector<u64> { 2, 1, 1, 1, 1, 1, 1, 4, 3, 3, 2, 2, 2, 4, 4 },
-                },
-                dbms::Column {
-                    std::vector<u64> { 11, 99, 99, 22, 22, 1010, 1010, 44, 77, 1111, 1212, 1515, 1515, 1616, 1616 },
-                },
-                dbms::Column {
-                    std::vector<u64> { 10, 120, 157, 120, 157, 120, 157, 143, 198, 198, 10, 44, 46, 151, 104 },
-                },
-            },
-            dbms::ColumnNames { { "A", "B", "C", "E" }, { "Column1", "Column2" } },
-        };
-
-        tests[1].expectedSumSquaredCol = dbms::Column {
-            std::vector<u64>{441, 47961, 65536, 20164, 32041, 1276900, 1361889, 34969, 75625, 1713481, 1493284, 2430481, 2436721, 3122289, 2958400}
-        };
-        tests[1].expectedSumSquared = 17070182;
+        tests[0].expectedSumSquared = 5567;
     }
 
     for (auto& t : tests) {
-        auto result = dbms::hashJoin(t.left, t.right, t.leftColNames, t.rightColNames);
+        auto result = dbms::binarySearchJoin(t.left, t.right, t.leftColNames, t.rightColNames);
 
-        sortDataInColumns(result.columns);
+        sortDataInColumns(result.columns); // TODO: is this necessary?
 
         Assert(result.names.colNames == t.expected.names.colNames, "Column names mismatch");
         Assert(result.names.valueColNames == t.expected.names.valueColNames, "Value column names mismatch");
@@ -127,7 +79,7 @@ i32 hashJoinOnTwoColumnGroups() {
     return 0;
 }
 
-i32 hashJoinOnMultipleColumnGroups() {
+i32 binarySearchJoinOnMultipleColumnGroups() {
     struct TestCase {
         std::vector<dbms::ColumnGroup> sequence;
         std::vector<dbms::ColumnNames> sequenceColNames;
@@ -190,9 +142,9 @@ i32 hashJoinOnMultipleColumnGroups() {
     }
 
     for (auto& t : tests) {
-        dbms::JoinResult result = dbms::hashJoin(t.sequence[0], t.sequence[1], t.sequenceColNames[0], t.sequenceColNames[1]);
+        dbms::JoinResult result = dbms::binarySearchJoin(t.sequence[0], t.sequence[1], t.sequenceColNames[0], t.sequenceColNames[1]);
         for (u64 i = 2; i < t.sequence.size(); i++) {
-            result = dbms::hashJoin(result.columns, t.sequence[i], result.names, t.sequenceColNames[i]);
+            result = dbms::binarySearchJoin(result.columns, t.sequence[i], result.names, t.sequenceColNames[i]);
         }
 
         sortDataInColumns(result.columns);
@@ -210,8 +162,8 @@ i32 hashJoinOnMultipleColumnGroups() {
     return 0;
 }
 
-i32 runHashJoinTestsSuite() {
-    RunTest(hashJoinOnTwoColumnGroups);
-    RunTest(hashJoinOnMultipleColumnGroups);
+i32 runBinarySearchJoinTestsSute() {
+    RunTest(binarySearchJoinOnTwoColumnGroups);
+    RunTest(binarySearchJoinOnMultipleColumnGroups);
     return 0;
 }

@@ -36,7 +36,7 @@ JoinResult binarySearchJoin(const ColumnGroup& left,
     constexpr u64 joinIdxRight = 0;
 
     for (u64 i = 0; i < leftColNames.colNames.size(); i++) {
-        if (leftColNames.colNames[i] == leftColNames.colNames[joinIdxRight]) {
+        if (leftColNames.colNames[i] == rightColNames.colNames[joinIdxRight]) {
             joinIdxLeft = i;
             break;
         }
@@ -63,7 +63,7 @@ JoinResult binarySearchJoin(const ColumnGroup& left,
             }
 
             // Iterate through all occurrences of the value in the right table:
-            while (rightValueIdx < rightDataSrc.size() && rightDataSrc[rightValueIdx] == leftValue) {
+            while (u64(rightValueIdx) < rightDataSrc.size() && rightDataSrc[rightValueIdx] == leftValue) {
                 bool match = dbms::checkSecondaryKeys(leftColNames, rightColNames, left, right, leftRow, rightValueIdx);
                 if (match) {
                     dbms::appendRowToResult(result, leftColNames, rightColNames, left, right, leftRow, rightValueIdx);

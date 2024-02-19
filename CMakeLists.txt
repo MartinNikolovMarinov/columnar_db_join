@@ -118,6 +118,7 @@ if(BUILD_TESTS)
         tests/t-hash_join.cpp
         tests/t-cross_join.cpp
         tests/t-merge_join.cpp
+        tests/t-binary_search_join.cpp
     )
 
     add_executable(${test_executable} ${src_files} ${test_src_files} test_main.cpp)

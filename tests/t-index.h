@@ -36,5 +36,6 @@ i32 runDBMSTestsSuite();
 i32 runHashJoinTestsSuite();
 i32 runCrossJoinTestsSuite();
 i32 runMergeJoinTestsSuite();
+i32 runBinarySearchJoinTestsSute();
 
 i32 runAllTests();
