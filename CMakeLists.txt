@@ -72,6 +72,7 @@ set(src_files
     src/core/random.cpp
 
     src/dbms.cpp
+    src/memory_mapped_file.cpp
     src/sort.cpp
     src/hash_join.cpp
     src/cross_join.cpp

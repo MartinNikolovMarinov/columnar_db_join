@@ -24,56 +24,98 @@ void initSubmodules() {
     logInfo("DBMS_DATA_PATH = " DBMS_DATA_PATH);
 }
 
-// void loadDatabase(const char* path, Database& db) {
-//     namespace fs = std::filesystem;
+bool loadDatabase(const char* path, Database& db) {
+    namespace fs = std::filesystem;
+    constexpr const char* COLUMN_PREFIX = Database::DBMS_DATA_COLUMN_PREFIX.data();
 
-//     db.path = path;
-//     db.name = fs::path(path).filename().string();
-//     db.tables.clear();
+    db.path = path;
+    db.name = fs::path(path).filename().string();
+    db.tables.clear();
 
-//     for (const auto & columnDir : fs::directory_iterator(db.path)) {
-//         if (columnDir.is_directory()) {
-//             Table t;
-//             t.name = columnDir.path().stem().string();
-//             t.path = columnDir.path();
+    for (const auto & columnDir : fs::directory_iterator(db.path)) {
+        if (columnDir.is_directory()) {
+            Database::Table t;
+            t.name = columnDir.path().stem().string();
+            t.path = columnDir.path();
 
-//             for (const auto & columnFile : fs::directory_iterator(columnDir.path())) {
-//                 if (columnFile.is_regular_file()) {
-//                     std::string colName = columnFile.path().stem().string();
-//                     if (colName != "value" && colName.find(DBMS_DATA_COLUMN_PREFIX) != std::string::npos) {
-//                         colName = colName.erase(0, colName.find_last_of(DBMS_DATA_COLUMN_PREFIX) + 1);
-//                     }
-//                     t.columnNames.push_back(std::move(colName));
-//                 }
-//             }
+            for (const auto & columnFile : fs::directory_iterator(columnDir.path())) {
+                if (columnFile.is_regular_file()) {
+                    std::string colName = columnFile.path().stem().string();
+                    if (colName != "value" && colName.find(COLUMN_PREFIX) != std::string::npos) {
+                        colName = colName.erase(0, colName.find_last_of(COLUMN_PREFIX) + 1);
+                        t.names.colNames.push_back(std::move(colName));
+                    }
+                    else {
+                        t.names.valueColNames.push_back(colName);
+                    }
+                }
+            }
 
-//             std::sort(t.columnNames.begin(), t.columnNames.end(), [](const std::string& a, const std::string& b) {
-//                 if (a == "value") return false;
-//                 return a < b;
-//             });
+            if (t.names.colNames.empty()) {
+                logFatal("Table %s has no columns", t.name.c_str());
+                return false;
+            }
 
-//             for (const auto& colName : t.columnNames) {
-//                 std::string pathToFile;
-//                 if (colName == "value") {
-//                     pathToFile = (columnDir.path() / (colName + DBMS_DATA_FILE_EXTENSION)).string();
-//                 }
-//                 else {
-//                     pathToFile = (columnDir.path() / (DBMS_DATA_COLUMN_PREFIX + colName + DBMS_DATA_FILE_EXTENSION)).string();
-//                 }
+            std::sort(t.names.colNames.begin(), t.names.colNames.end());
 
-//                 ColumnData c;
-//                 int error = c.memorySrc.open(pathToFile.c_str(), 0);
-//                 if (error != 0) {
-//                     logFatal("Error Mapping File: %s, exiting...", strerror(error));
-//                     Panic(false, "Failed to loadDatabase. Reason: Mapping failed.");
-//                 }
-//                 t.columns.push_back(std::move(c));
-//             }
+            auto createColumn = [](const auto& dir,
+                                   const std::string& colName,
+                                   Column& c,
+                                   MemoryMappedSrc& mms) -> bool {
 
-//             db.tables.push_back(std::move(t));
-//         }
-//     }
-// }
+                constexpr const char* DATA_FILE_EXTENSION = Database::DBMS_DATA_FILE_EXTENSION.data();
+
+                std::string pathToFile;
+                if (colName == "value") {
+                    pathToFile = (dir.path() / (colName + DATA_FILE_EXTENSION)).string();
+                }
+                else {
+                    pathToFile = (dir.path() / (COLUMN_PREFIX + colName + DATA_FILE_EXTENSION)).string();
+                }
+
+                bool ok = openMemoryMappedFile(pathToFile, mms);
+                if (!ok) {
+                    logFatal("Failed to create a memory mapped file for '%s'", pathToFile.c_str());
+                    return false;
+                }
+
+                const u64* dataptr = reinterpret_cast<const u64*>(mms.data());
+                u64 fileSizeInU64 = mms.size() / sizeof(u64);
+                c = Column(fileSizeInU64, dataptr);
+                return true;
+            };
+
+            for (const auto& colName : t.names.colNames) {
+                Column c;
+                MemoryMappedSrc mms;
+                if (!createColumn(columnDir, colName, c, mms)) {
+                    logFatal("Failed to create column '%s'", colName.c_str());
+                    return false;
+                }
+
+                t.columns.push_back(std::move(c));
+                t.mappedFiles.push_back(std::move(mms));
+            }
+
+            for (const auto& colName : t.names.valueColNames) {
+                Column c;
+                MemoryMappedSrc mms;
+                if (!createColumn(columnDir, colName, c, mms)) {
+                    logFatal("Failed to create column '%s'", colName.c_str());
+                    return false;
+                }
+
+                t.columns.push_back(std::move(c));
+                t.mappedFiles.push_back(std::move(mms));
+            }
+
+
+            db.tables.push_back(std::move(t));
+        }
+    }
+
+    return true;
+}
 
 // std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables) {
 //     if (tables.empty()) return {};
@@ -333,7 +375,6 @@ void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNa
     // Print rows
     for (u64 i = 0; i < cols[0].data().size(); i++) {
         for (u64 j = 0; j < cols.size(); j++) {
-            u64 v = cols[j].data()[i];
             printf("%lu\t\t", cols[j].data()[i]);
         }
         printf("\n");

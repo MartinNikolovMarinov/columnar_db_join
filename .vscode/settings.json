@@ -65,6 +65,7 @@
         "thread": "cpp",
         "codecvt": "cpp",
         "typeindex": "cpp",
-        "optional": "cpp"
+        "optional": "cpp",
+        "expected": "cpp"
     }
 }

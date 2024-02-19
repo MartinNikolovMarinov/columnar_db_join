@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core.h>
+#include <memory_mapped_file.h>
 
 #include <filesystem>
 #include <vector>
@@ -8,6 +9,8 @@
 
 namespace dbms {
 
+struct Table;
+struct Database;
 struct DataSource;
 struct Column;
 struct ColumnNames;
@@ -86,6 +89,25 @@ struct ColumnNames {
     std::vector<std::string> colNames;
     std::vector<std::string> valueColNames;
 };
+
+struct Database {
+    struct Table {
+        std::string name;
+        std::string path;
+        ColumnNames names;
+        ColumnGroup columns;
+        std::vector<MemoryMappedSrc> mappedFiles;
+    };
+
+    std::string path;
+    std::string name;
+    std::vector<Table> tables;
+
+    static constexpr std::string_view DBMS_DATA_COLUMN_PREFIX = "key_";
+    static constexpr std::string_view DBMS_DATA_FILE_EXTENSION = ".bin";
+};
+
+bool loadDatabase(const char* path, Database& db);
 
 struct JoinResult {
     ColumnGroup columns;
