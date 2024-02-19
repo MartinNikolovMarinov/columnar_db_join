@@ -18,6 +18,7 @@ using IndexTranslationTable = std::vector<std::pair<u64, u64>>;
 using WriteOrder = std::pair<IndexTranslationTable, IndexTranslationTable>;
 
 void initSubmodules();
+void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNames);
 
 struct DataSource {
 

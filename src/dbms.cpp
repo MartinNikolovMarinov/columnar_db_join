@@ -75,49 +75,6 @@ void initSubmodules() {
 //     }
 // }
 
-// void debug_printTable(dbms::Table& table) {
-//     std::vector<std::vector<u64>> inmemory;
-//     std::vector<std::string> columnNames;
-
-//     for (addr_size i = 0; i < table.columns.size(); i++) {
-//         auto& col = table.columns[i];
-//         const auto& colName = table.columnNames[i];
-
-//         std::vector<u64> columnData;
-//         columnData.reserve(col.memorySrc.size() / sizeof(u64));
-//         inmemory.push_back(columnData);
-
-//         columnNames.push_back(colName);
-
-//         addr_size max = 0;
-//         const u64* data = static_cast<const u64*>(col.memorySrc.data(0, max));
-//         Assert(max == col.memorySrc.size(), "TODO: Implement reading multiple chunks of data for data sources that don't use memory mapping.");
-//         max /= sizeof(u64);
-
-//         for (addr_size j = 0; j < max; j++) {
-//             inmemory[i].push_back(data[j]);
-//         }
-//     }
-
-//     std::string result;
-
-//     // Print table header:
-//     for (addr_size j = 0; j < columnNames.size(); j++) {
-//         result += columnNames[j] + " ";
-//     }
-//     result += "\n";
-
-//     // Print table data:
-//     for (addr_size i = 0; i < inmemory[0].size(); i++) {
-//         for (addr_size j = 0; j < inmemory.size(); j++) {
-//             result += std::to_string(inmemory[j][i]) + " ";
-//         }
-//         result += "\n";
-//     }
-
-//     logInfo("\nTable: %s\n%s", table.name.c_str(), result.c_str());
-// }
-
 // std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables) {
 //     if (tables.empty()) return {};
 
@@ -356,6 +313,31 @@ u64 sumSquared(JoinResult& cols) {
     cols.columns.emplace_back(Column { std::move(sumSquaredColumn) });
     cols.names.valueColNames.push_back("Sum^2");
     return total;
+}
+
+void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNames) {
+    printf("\nColumn Names:\n\n");
+
+    // Print the column names
+    for (u64 i = 0; i < columnNames.colNames.size(); i++) {
+        printf("%s\t\t", columnNames.colNames[i].c_str());
+    }
+
+    // Print the value column names
+    for (u64 i = 0; i < columnNames.valueColNames.size(); i++) {
+        printf("%s\t\t", columnNames.valueColNames[i].c_str());
+    }
+
+    printf("\n\nValues:\n\n");
+
+    // Print rows
+    for (u64 i = 0; i < cols[0].data().size(); i++) {
+        for (u64 j = 0; j < cols.size(); j++) {
+            u64 v = cols[j].data()[i];
+            printf("%lu\t\t", cols[j].data()[i]);
+        }
+        printf("\n");
+    }
 }
 
 } // namespace dbms
