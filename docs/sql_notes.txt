@@ -23,7 +23,7 @@
 
 
     SELECT  ac.A as A,
-    		bc.B as B,
+            bc.B as B,
             bc.C as C,
             ac.V as Column1,
             bc.V as Column2,
@@ -99,12 +99,12 @@
 
 
     SELECT  ace.A as A,
-    		bce.B as B,
+            bce.B as B,
             bce.C as C,
             bce.E as E,
             ace.V as Column1,
             bce.V as Column2,
-    		(ace.V + bce.V) * (ace.V + bce.V) as SumSquared
+            (ace.V + bce.V) * (ace.V + bce.V) as SumSquared
     from ACE as ace
     inner join BCE as bce on ace.C = bce.C and ace.E = bce.E
     order by ace.A, bce.B, bce.C, bce.E, ace.V, bce.V
@@ -391,16 +391,67 @@
     join ABD as abd on abc.A = abd.A and abc.B = abd.B
     order by abc.A, abc.B, abc.C, abd.D, abc.V, abd.V
 
-    A	B	C	D	Column1	Column2	Sum^2
-    1	1	7	17	12	23	1225
-    1	1	7	18	12	24	1296
-    1	2	8	19	13	25	1444
-    1	2	8	20	13	26	1521
-    1	2	9	19	14	25	1521
-    1	2	9	20	14	26	1600
-    2	3	10	21	15	27	1764
+    A    B    C    D    Column1    Column2    Sum^2
+    1    1    7    17   12         23        1225
+    1    1    7    18   12         24        1296
+    1    2    8    19   13         25        1444
+    1    2    8    20   13         26        1521
+    1    2    9    19   14         25        1521
+    1    2    9    20   14         26        1600
+    2    3    10   21   15         27        1764
 
     expected total is 10371
+
+# Test 7
+
+    // Forgot to write the first query.
+
+    ABE
+    A	B	E	V
+    1	10	4	14
+    1	11	4	14
+    1	12	5	14
+    1	13	6	14
+    2	14	6	14
+    2	15	6	14
+    3	16	4	14
+    3	17	5	14
+    3	18	5	14
+
+    AEGH
+    A	E	G	H	V
+    1	4	19	26	33
+    1	4	20	27	34
+    1	5	21	28	35
+    2	6	22	29	36
+    2	6	23	30	37
+    3	3	24	31	38
+    3	4	25	32	39
+
+
+    select
+        abe.*,
+        aegh.G,
+        aegh.H,
+        abe.V as Column1,
+        aegh.V as Column2,
+        (abe.V + aegh.V) * (abe.V + aegh.V) as "Sum^2"
+    from ABE as abe
+    join AEGH as aegh on aegh.A = abe.A and aegh.E = abe.E
+
+    A	B	E	G	H	Column1	Column2	Sum^2
+    1	10	4	19	26	14	    33	    2209
+    1	10	4	20	27	14	    34	    2304
+    1	11	4	19	26	14	    33	    2209
+    1	11	4	20	27	14	    34	    2304
+    1	12	5	21	28	14	    35	    2401
+    2	14	6	22	29	14	    36	    2500
+    2	14	6	23	30	14	    37	    2601
+    2	15	6	22	29	14	    36	    2500
+    2	15	6	23	30	14	    37	    2601
+    3	16	4	25	32	14	    39	    2809
+
+    expected total is 24438
 
 # helper queries
 
