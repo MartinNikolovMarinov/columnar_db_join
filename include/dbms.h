@@ -74,6 +74,12 @@ struct Column {
         m_size++;
     }
 
+    inline void append(Column&& c) {
+        Assert(m_mappedFile == nullptr, "Cannot append to a column that is backed by a file");
+        m_inMemoryData.insert(m_inMemoryData.end(), c.m_inMemoryData.begin(), c.m_inMemoryData.end());
+        m_size += c.m_inMemoryData.size();
+    }
+
     inline void reserve(u64 size) {
         Assert(m_mappedFile == nullptr, "Cannot reserve space for a column that is backed by a file");
         m_inMemoryData.reserve(size);

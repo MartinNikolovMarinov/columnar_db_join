@@ -5,6 +5,7 @@ namespace dbms {
 void sortDataInColumns(ColumnGroup& cols) {
     if (cols.empty() || cols[0].data().empty()) return;
 
+    bool isSorted = true;
     u64 numRows = cols[0].data().size();
     std::vector<u64> indices(numRows);
     for (u64 i = 0; i < numRows; ++i) {
@@ -12,16 +13,21 @@ void sortDataInColumns(ColumnGroup& cols) {
     }
 
     // Custom comparator to sort indices based on table row values
-    auto columnComparer = [&cols](u64 a, u64 b) {
+    auto columnComparer = [&cols, &isSorted](u64 a, u64 b) {
         for (const auto& column : cols) {
             auto cdata = column.data();
-            if (cdata[a] != cdata[b]) return cdata[a] < cdata[b];
+            if (cdata[a] != cdata[b]) {
+                isSorted = false;
+                return cdata[a] < cdata[b];
+            }
         }
         return false; // Equal rows
     };
 
     // Sort indices based on comparator
     std::sort(indices.begin(), indices.end(), columnComparer);
+
+    if (isSorted) return;
 
     // Rearrange each column based on sorted indices
     for (auto& column : cols) {
