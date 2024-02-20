@@ -47,6 +47,14 @@ private:
         logTrace(prefix_msg": %s", CONCATENATE(timer, __LINE__).toString().data()); \
     }; \
 
+#define INFO_BLOCK_CPU_TIME(prefix_msg) \
+    core::Timer CONCATENATE(timer, __LINE__); \
+    CONCATENATE(timer, __LINE__).start(); \
+    defer { \
+        CONCATENATE(timer, __LINE__).update(); \
+        logInfo(prefix_msg": %s", CONCATENATE(timer, __LINE__).toString().data()); \
+    }; \
+
 #define TRACE_BLOCK_THROUGHPUT(prefix_msg, byteCount) \
     core::Throughput throughput; \
     throughput.start(byteCount); \

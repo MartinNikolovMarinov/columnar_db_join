@@ -114,6 +114,7 @@ struct Database {
 };
 
 bool loadDatabase(const char* path, Database& db);
+void optimizeAlignmentExecutionOrder(Database& db);
 
 struct JoinResult {
     ColumnGroup columns;
@@ -151,6 +152,8 @@ IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const
 WriteOrder createTableWriteOrder(const ColumnNames& a, const ColumnNames& b, const ColumnNames& unique);
 
 void sortDataInColumns(ColumnGroup& cols);
+
+JoinResult executeJoin(Database& db);
 
 JoinResult hashJoin(const ColumnGroup& left,
                     const ColumnGroup& right,

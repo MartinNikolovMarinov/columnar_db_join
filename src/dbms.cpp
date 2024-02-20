@@ -119,97 +119,97 @@ bool loadDatabase(const char* path, Database& db) {
     return true;
 }
 
-// std::vector<dbms::Table> optimizeAlignmentExecutionOrder(std::vector<dbms::Table>&& tables) {
-//     if (tables.empty()) return {};
+void optimizeAlignmentExecutionOrder(Database& db) {
+    if (db.tables.empty()) return;
 
-//     std::vector<dbms::Table> result;
-//     result.reserve(tables.size());
+    std::vector<dbms::Database::Table> optimizedTableOrder;
+    optimizedTableOrder.reserve(db.tables.size());
 
-//     std::unordered_set<addr_size> joinWithBothClustered;
-//     std::unordered_set<addr_size> joinWithOneClustered;
-//     std::unordered_set<addr_size> joinWithNoClustered;
+    std::unordered_set<addr_size> joinWithBothClustered;
+    std::unordered_set<addr_size> joinWithOneClustered;
+    std::unordered_set<addr_size> joinWithNoClustered;
 
-//     // Group together all tables that have the same clustered index
-//     {
-//         for (addr_size i = 0; i < tables.size(); i++) {
-//             if (tables[i].columnNames.empty()) continue;
+    // Group together all tables that have the same clustered index
+    {
+        for (addr_size i = 0; i < db.tables.size(); i++) {
+            if (db.tables[i].names.colNames.empty()) continue;
 
-//             const std::string& a = tables[i].columnNames[0];
+            const std::string& a = db.tables[i].names.colNames[0];
 
-//             addr_off idx = -1;
-//             for (addr_size j = 0; j < tables.size(); j++) {
-//                 if (i == j) continue;
-//                 if (tables[j].columnNames.empty()) continue;
+            addr_off idx = -1;
+            for (addr_size j = 0; j < db.tables.size(); j++) {
+                if (i == j) continue;
+                if (db.tables[j].names.colNames.empty()) continue;
 
-//                 const std::string& b = tables[j].columnNames[0];
-//                 if (a == b) {
-//                     idx = j;
-//                     break;
-//                 }
-//             }
+                const std::string& b = db.tables[j].names.colNames[0];
+                if (a == b) {
+                    idx = j;
+                    break;
+                }
+            }
 
-//             if (idx >= 0) {
-//                 joinWithBothClustered.insert(i);
-//             }
-//         }
-//     }
+            if (idx >= 0) {
+                joinWithBothClustered.insert(i);
+            }
+        }
+    }
 
-//     // Group together all tables that can be joined on one cluster index
-//     {
-//         for (addr_size i = 0; i < tables.size(); i++) {
-//             if (tables[i].columnNames.empty()) continue;
-//             if (joinWithBothClustered.count(i) > 0) continue;
+    // Group together all tables that can be joined on one cluster index
+    {
+        for (addr_size i = 0; i < db.tables.size(); i++) {
+            if (db.tables[i].names.colNames.empty()) continue;
+            if (joinWithBothClustered.count(i) > 0) continue;
 
-//             const std::string& a = tables[i].columnNames[0];
+            const std::string& a = db.tables[i].names.colNames[0];
 
-//             addr_off idx = -1;
-//             for (addr_size j = 0; j < tables.size(); j++) {
-//                 if (i == j) continue;
-//                 if (tables[j].columnNames.empty()) continue;
+            addr_off idx = -1;
+            for (addr_size j = 0; j < db.tables.size(); j++) {
+                if (i == j) continue;
+                if (db.tables[j].names.colNames.empty()) continue;
 
-//                 for (const auto& col : tables[j].columnNames) {
-//                     if (a == col) {
-//                         idx = j;
-//                         break;
-//                     }
-//                 }
+                for (const auto& col : db.tables[j].names.colNames) {
+                    if (a == col) {
+                        idx = j;
+                        break;
+                    }
+                }
 
-//                 if (idx >= 0) break;
-//             }
+                if (idx >= 0) break;
+            }
 
-//             if (idx >= 0) {
-//                 joinWithOneClustered.insert(i);
-//             }
-//         }
-//     }
+            if (idx >= 0) {
+                joinWithOneClustered.insert(i);
+            }
+        }
+    }
 
-//     // Group together with least priority tables that can be joined only on un-clustered indices:
-//     {
-//         for (addr_size i = 0; i < tables.size(); i++) {
-//             if (tables[i].columnNames.empty()) continue;
+    // Group together with least priority tables that can be joined only on un-clustered indices:
+    {
+        for (addr_size i = 0; i < db.tables.size(); i++) {
+            if (db.tables[i].names.colNames.empty()) continue;
 
-//             if (joinWithBothClustered.count(i) == 0 && joinWithOneClustered.count(i) == 0) {
-//                 joinWithNoClustered.insert(i);
-//             }
-//         }
-//     }
+            if (joinWithBothClustered.count(i) == 0 && joinWithOneClustered.count(i) == 0) {
+                joinWithNoClustered.insert(i);
+            }
+        }
+    }
 
-//     // Add the tables to the result in the order of their priority:
+    // Add the tables to the result in the order of their priority:
 
-//     for (addr_size i : joinWithBothClustered) {
-//         result.push_back(std::move(tables[i]));
-//     }
+    for (addr_size i : joinWithBothClustered) {
+        optimizedTableOrder.push_back(std::move(db.tables[i]));
+    }
 
-//     for (addr_size i : joinWithOneClustered) {
-//         result.push_back(std::move(tables[i]));
-//     }
+    for (addr_size i : joinWithOneClustered) {
+        optimizedTableOrder.push_back(std::move(db.tables[i]));
+    }
 
-//     for (addr_size i : joinWithNoClustered) {
-//         result.push_back(std::move(tables[i]));
-//     }
+    for (addr_size i : joinWithNoClustered) {
+        optimizedTableOrder.push_back(std::move(db.tables[i]));
+    }
 
-//     return result;
-// }
+    db.tables = std::move(optimizedTableOrder); // Move the result back to the original vector
+}
 
 IndexTranslationTable createIndexTranslationTable(const ColumnNames& from, const ColumnNames& to) {
     IndexTranslationTable ttable;
@@ -359,6 +359,37 @@ u64 sumSquared(JoinResult& cols) {
     cols.columns.emplace_back(Column { std::move(sumSquaredColumn) });
     cols.names.valueColNames.push_back("Sum^2");
     return total;
+}
+
+JoinResult executeJoin(Database& db) {
+    optimizeAlignmentExecutionOrder(db);
+
+    auto& tables = db.tables;
+
+    if (tables.empty()) {
+        return {};
+    }
+
+    if (tables.size() == 1) {
+        JoinResult result = JoinResult::createFromNames(tables[0].names, tables[0].names);
+        result.columns = tables[0].columns;
+        return result;
+    }
+
+    auto executeJoin = [](const ColumnGroup& a,
+                          const ColumnGroup& b,
+                          const ColumnNames& aNames,
+                          const ColumnNames& bNames) -> JoinResult {
+        JoinResult res;
+        return res;
+    };
+
+    JoinResult result = executeJoin(tables[0].columns, tables[1].columns, tables[0].names, tables[1].names);
+    for (u64 i = 2; i < tables.size(); i++) {
+        result = executeJoin(result.columns, tables[i].columns, result.names, tables[i].names);
+    }
+
+    return result;
 }
 
 void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNames) {
