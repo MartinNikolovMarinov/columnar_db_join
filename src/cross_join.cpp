@@ -9,10 +9,10 @@ namespace {
 static constexpr u64 LARGE_DATASET_THRESHOLD = 500;
 
 void crossJoinImpl(JoinResult& result,
-                         const ColumnGroup& left, const ColumnGroup& right,
-                         const ColumnNames& leftColNames, const ColumnNames& rightColNames,
-                         u64 beginRowLeft, u64 endRowLeft,
-                         u64 beginRowRight, u64 endRowRight) {
+                   const ColumnGroup& left, const ColumnGroup& right,
+                   const ColumnNames& leftColNames, const ColumnNames& rightColNames,
+                   u64 beginRowLeft, u64 endRowLeft,
+                   u64 beginRowRight, u64 endRowRight) {
 
     // [BEGIN]: HOT SECTION
 

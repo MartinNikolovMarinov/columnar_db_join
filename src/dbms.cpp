@@ -376,17 +376,70 @@ JoinResult executeJoin(Database& db) {
         return result;
     }
 
-    auto executeJoin = [](const ColumnGroup& a,
-                          const ColumnGroup& b,
-                          const ColumnNames& aNames,
-                          const ColumnNames& bNames) -> JoinResult {
-        JoinResult res;
-        return res;
+    auto pickAnAlgorithmAndJoin = [](const ColumnGroup& a,
+                                     const ColumnGroup& b,
+                                     const ColumnNames& aNames,
+                                     const ColumnNames& bNames) -> JoinResult {
+        i64 matchIdxA = -1;
+        i64 matchIdxB = -1;
+        for (u64 i = 0; i < aNames.colNames.size(); i++) {
+            for (u64 j = 0; j < bNames.colNames.size(); j++) {
+                if (aNames.colNames[i] == bNames.colNames[j]) {
+                    matchIdxA = i;
+                    matchIdxB = j;
+                    break;
+                }
+            }
+            if (matchIdxA >= 0) break;
+        }
+
+        if (matchIdxA == matchIdxB) {
+            // return mergeJoin(a, b, aNames, bNames);
+            logInfo("Joining A and B with binary search join.");
+            return binarySearchJoin(a, b, aNames, bNames);
+        }
+        else if (matchIdxA == 0) {
+            // The second argument has a clustered index first.
+            logInfo("Joining B and A with binary search join.");
+            return binarySearchJoin(b, a, aNames, bNames);
+        }
+        else if (matchIdxB == 0) {
+            // The second argument has a clustered index first.
+            logInfo("Joining A and B with binary search join.");
+            return binarySearchJoin(a, b, aNames, bNames);
+        }
+        else if (matchIdxA >= 1 && matchIdxB >= 1) {
+            if (a.size() > b.size()) {
+                // Bigger one on the left.
+                logInfo("Joining A and B with hash join.");
+                return hashJoin(a, b, aNames, bNames);
+            }
+            else {
+                logInfo("Joining B and A with hash join.");
+                return hashJoin(b, a, aNames, bNames);
+            }
+        }
+        else if (matchIdxA == -1 && matchIdxB == -1) {
+            if (a.size() > b.size()) {
+                // Bigger one on the left.
+                logInfo("Joining A and B with cross join.");
+                return crossJoin(a, b, aNames, bNames);
+            }
+            else {
+                logInfo("Joining B and A with cross join.");
+                return crossJoin(b, a, aNames, bNames);
+            }
+        }
+        else {
+            logFatal("Failed to pick a join algorithm.");
+            Panic("[BUG] Failed to pick a join algorithm.");
+            return {};
+        }
     };
 
-    JoinResult result = executeJoin(tables[0].columns, tables[1].columns, tables[0].names, tables[1].names);
+    JoinResult result = pickAnAlgorithmAndJoin(tables[0].columns, tables[1].columns, tables[0].names, tables[1].names);
     for (u64 i = 2; i < tables.size(); i++) {
-        result = executeJoin(result.columns, tables[i].columns, result.names, tables[i].names);
+        result = pickAnAlgorithmAndJoin(result.columns, tables[i].columns, result.names, tables[i].names);
     }
 
     return result;
