@@ -8,7 +8,7 @@ namespace {
 
 static constexpr u64 LARGE_DATASET_THRESHOLD = 10000;
 
-i64 binarySearch(const DataSource& dataSrc, u64 value) {
+inline i64 binarySearch(const DataSource& dataSrc, u64 value) {
     i64 left = 0;
     i64 right = dataSrc.size() - 1;
 
@@ -37,24 +37,54 @@ void searchAndJoin(JoinResult& result,
                    u64 beginRow, u64 endRow)  {
     // [BEGIN]: HOT SECTION
 
-    for (u64 leftRow = beginRow; leftRow < endRow; leftRow++) {
-        u64 leftValue = leftDataSrc[leftRow];
-
-        i64 rightValueIdx = binarySearch(rightDataSrc, leftValue);
-        if (rightValueIdx != -1) {
-
-            // Find the first occurrence of the value in the right table:
-            while (rightValueIdx > 0 && rightDataSrc[rightValueIdx - 1] == leftValue) {
-                rightValueIdx--;
+    auto handleMatch = [&](u64 leftRow, i64 rightValueIdx) {
+        while (rightValueIdx > 0 && rightDataSrc[rightValueIdx - 1] == leftDataSrc[leftRow]) {
+            rightValueIdx--;
+        }
+        while (u64(rightValueIdx) < rightDataSrc.size() && rightDataSrc[rightValueIdx] == leftDataSrc[leftRow]) {
+            bool match = dbms::checkSecondaryKeys(leftColNames, rightColNames, left, right, leftRow, rightValueIdx);
+            if (match) {
+                dbms::appendRowToResult(result, leftColNames, rightColNames, left, right, leftRow, rightValueIdx);
             }
+            rightValueIdx++;
+        }
+    };
 
-            // Iterate through all occurrences of the value in the right table:
-            while (u64(rightValueIdx) < rightDataSrc.size() && rightDataSrc[rightValueIdx] == leftValue) {
-                bool match = dbms::checkSecondaryKeys(leftColNames, rightColNames, left, right, leftRow, rightValueIdx);
-                if (match) {
-                    dbms::appendRowToResult(result, leftColNames, rightColNames, left, right, leftRow, rightValueIdx);
-                }
-                rightValueIdx++;
+    constexpr u64 BATCH_SIZE = 4;
+
+    // Unroll the loop by hand to make sure the compiler can vectorize it
+    for (u64 leftRow = beginRow; leftRow + 4 <= endRow; leftRow += BATCH_SIZE) {
+        u64 r1 = leftRow;
+        u64 r2 = leftRow + 1;
+        u64 r3 = leftRow + 2;
+        u64 r4 = leftRow + 3;
+
+        if (i64 idx = binarySearch(rightDataSrc, leftDataSrc[r1]); idx != -1) {
+            handleMatch(r1, idx);
+        }
+
+        if (i64 idx = binarySearch(rightDataSrc, leftDataSrc[r2]); idx != -1) {
+            handleMatch(r2, idx);
+        }
+
+        if (i64 idx = binarySearch(rightDataSrc, leftDataSrc[r3]); idx != -1) {
+            handleMatch(r3, idx);
+        }
+
+        if (i64 idx = binarySearch(rightDataSrc, leftDataSrc[r4]); idx != -1) {
+            handleMatch(r4, idx);
+        }
+    }
+
+    // Handle any remaining rows
+    u64 remainder = (endRow - beginRow) % BATCH_SIZE;
+    if (remainder != 0) {
+        u64 startOfRemainder = endRow - remainder;
+        for (u64 leftRow = startOfRemainder; leftRow < endRow; ++leftRow) {
+            u64 leftValue = leftDataSrc[leftRow];
+            i64 rightValueIdx = binarySearch(rightDataSrc, leftValue);
+            if (rightValueIdx != -1) {
+                handleMatch(leftRow, rightValueIdx);
             }
         }
     }
