@@ -393,41 +393,38 @@ JoinResult executeJoin(Database& db) {
             if (matchIdxA >= 0) break;
         }
 
-        if (matchIdxA == matchIdxB) {
-            // return mergeJoin(a, b, aNames, bNames);
-            logInfo("Joining A and B with binary search join.");
-            return binarySearchJoin(a, b, aNames, bNames);
-        }
-        else if (matchIdxA == 0) {
-            // The second argument has a clustered index first.
-            logInfo("Joining B and A with binary search join.");
-            return binarySearchJoin(b, a, aNames, bNames);
-        }
-        else if (matchIdxB == 0) {
-            // The second argument has a clustered index first.
-            logInfo("Joining A and B with binary search join.");
-            return binarySearchJoin(a, b, aNames, bNames);
-        }
-        else if (matchIdxA >= 1 && matchIdxB >= 1) {
+        if (matchIdxA == -1 && matchIdxB == -1) {
             if (a.size() > b.size()) {
-                // Bigger one on the left.
-                logInfo("Joining A and B with hash join.");
-                return hashJoin(a, b, aNames, bNames);
-            }
-            else {
-                logInfo("Joining B and A with hash join.");
-                return hashJoin(b, a, aNames, bNames);
-            }
-        }
-        else if (matchIdxA == -1 && matchIdxB == -1) {
-            if (a.size() > b.size()) {
-                // Bigger one on the left.
                 logInfo("Joining A and B with cross join.");
                 return crossJoin(a, b, aNames, bNames);
             }
             else {
                 logInfo("Joining B and A with cross join.");
                 return crossJoin(b, a, aNames, bNames);
+            }
+        }
+        else if (matchIdxA == 0 && matchIdxA == matchIdxB) {
+            // Both have the same clustered index.
+            // return mergeJoin(a, b, aNames, bNames);
+            logInfo("Joining A and B with binary search join.");
+            return binarySearchJoin(a, b, aNames, bNames);
+        }
+        else if (matchIdxA == 0 && matchIdxB > 0) {
+            logInfo("Joining B and A with binary search join.");
+            return binarySearchJoin(b, a, aNames, bNames);
+        }
+        else if (matchIdxB == 0 && matchIdxA > 0) {
+            logInfo("Joining A and B with binary search join.");
+            return binarySearchJoin(a, b, aNames, bNames);
+        }
+        else if (matchIdxA >= 1 && matchIdxB >= 1) {
+            if (a.size() > b.size()) {
+                logInfo("Joining A and B with hash join.");
+                return hashJoin(a, b, aNames, bNames);
+            }
+            else {
+                logInfo("Joining B and A with hash join.");
+                return hashJoin(b, a, aNames, bNames);
             }
         }
         else {
@@ -467,6 +464,8 @@ void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNa
         }
         printf("\n");
     }
+
+    printf("\n");
 }
 
 } // namespace dbms

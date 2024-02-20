@@ -8,7 +8,7 @@ set(executable_name dbms)
 string(TOUPPER ${executable_name} executable_name_uppercase)
 set(main_file main.cpp)
 
-project(${executable_name} VERSION 0.0.1)
+project(${executable_name} VERSION 1.0.0)
 
 # Detect Build Type
 

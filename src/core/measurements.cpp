@@ -19,20 +19,20 @@ std::string Timer::toString() {
     result.resize(256);
 
     if (delta >= std::chrono::hours(1)) {
-        int hours = int(std::chrono::duration_cast<std::chrono::hours>(delta).count());
-        int minutes = int(std::chrono::duration_cast<std::chrono::minutes>(delta).count() % 60);
-        int seconds = int(std::chrono::duration_cast<std::chrono::seconds>(delta).count() % 60);
+        i32 hours = i32(std::chrono::duration_cast<std::chrono::hours>(delta).count());
+        i32 minutes = i32(std::chrono::duration_cast<std::chrono::minutes>(delta).count() % 60);
+        i32 seconds = i32(std::chrono::duration_cast<std::chrono::seconds>(delta).count() % 60);
         i64 milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
         sprintf(&result[0], "%02dh %02dm %02ds %ldms", hours, minutes, seconds, milliseconds);
     }
     else if (delta >= std::chrono::minutes(1)) {
-        int minutes = int(std::chrono::duration_cast<std::chrono::minutes>(delta).count());
-        int seconds = int(std::chrono::duration_cast<std::chrono::seconds>(delta).count() % 60);
+        i32 minutes = i32(std::chrono::duration_cast<std::chrono::minutes>(delta).count());
+        i32 seconds = i32(std::chrono::duration_cast<std::chrono::seconds>(delta).count() % 60);
         i64 milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
         sprintf(&result[0], "%02dm %02ds %ldms", minutes, seconds, milliseconds);
     }
     else if (delta >= std::chrono::seconds(1)) {
-        int seconds = int(std::chrono::duration_cast<std::chrono::seconds>(delta).count());
+        i32 seconds = i32(std::chrono::duration_cast<std::chrono::seconds>(delta).count());
         i64 milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
         sprintf(&result[0], "%02ds %ldms", seconds, milliseconds);
     }

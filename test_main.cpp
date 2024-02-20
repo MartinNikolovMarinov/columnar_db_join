@@ -1,7 +1,7 @@
 #include <dbms.h>
 #include "tests/t-index.h"
 
-int main() {
+i32 main() {
     using namespace dbms;
 
     initSubmodules(core::LogLevel::L_WARNING);
