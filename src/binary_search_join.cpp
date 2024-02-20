@@ -53,7 +53,7 @@ void searchAndJoin(JoinResult& result,
     constexpr u64 BATCH_SIZE = 4;
 
     // Unroll the loop by hand to make sure the compiler can vectorize it
-    for (u64 leftRow = beginRow; leftRow + 4 <= endRow; leftRow += BATCH_SIZE) {
+    for (u64 leftRow = beginRow; leftRow + BATCH_SIZE <= endRow; leftRow += BATCH_SIZE) {
         u64 r1 = leftRow;
         u64 r2 = leftRow + 1;
         u64 r3 = leftRow + 2;
@@ -101,8 +101,8 @@ void searchAndJoinParallel(JoinResult& result,
     std::vector<std::thread> threads;
     u64 chunkSize = leftDataSrc.size() / numThreads;
 
-    u64 chunkSizeRemainder = leftDataSrc.size() % numThreads;
     std::vector<JoinResult> results; // Local results for each thread
+    u64 chunkSizeRemainder = leftDataSrc.size() % numThreads;
     if (chunkSizeRemainder > 0) {
         results.resize(numThreads + 1);
     }
@@ -181,12 +181,12 @@ JoinResult binarySearchJoin(const ColumnGroup& left,
 
     if (isLargeDataset) {
         searchAndJoinParallel(result, left, leftDataSrc, right, rightDataSrc, leftColNames, rightColNames);
-        dbms::sortDataInColumns(result.columns);
     }
     else {
         searchAndJoin(result, left, leftDataSrc, right, rightDataSrc, leftColNames, rightColNames, 0, rowCount);
-        dbms::sortDataInColumns(result.columns);
     }
+
+    dbms::sortDataInColumns(result.columns);
 
     return result;
 }

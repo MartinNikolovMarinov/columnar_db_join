@@ -113,8 +113,6 @@ i32 crossJoinOnTwoColumnGroups() {
             dbms::Column { std::vector<u64>{28, 32, 250, 256, 294, 326, 357, 381, 391, 895} },
             dbms::Column { std::vector<u64>{174, 403, 855, 754, 613, 46, 224, 980, 943, 388} },
             dbms::Column { std::vector<u64>{981, 712, 339, 431, 428, 207, 655, 409, 102, 526} },
-
-
         };
         tests[2].leftColNames.colNames = { "A", "B" };
         tests[2].leftColNames.valueColNames = { "value" };

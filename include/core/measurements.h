@@ -36,12 +36,15 @@ private:
     addr_size m_byteCount;
 };
 
+#define CONCATENATE_DIRECT(s1, s2) s1##s2
+#define CONCATENATE(s1, s2) CONCATENATE_DIRECT(s1, s2)
+
 #define TRACE_BLOCK_CPU_TIME(prefix_msg) \
-    core::Timer timer; \
-    timer.start(); \
+    core::Timer CONCATENATE(timer, __LINE__); \
+    CONCATENATE(timer, __LINE__).start(); \
     defer { \
-        timer.update(); \
-        logTrace(prefix_msg": %s", timer.toString().data()); \
+        CONCATENATE(timer, __LINE__).update(); \
+        logTrace(prefix_msg": %s", CONCATENATE(timer, __LINE__).toString().data()); \
     }; \
 
 #define TRACE_BLOCK_THROUGHPUT(prefix_msg, byteCount) \
@@ -51,6 +54,8 @@ private:
         throughput.update(byteCount); \
         logTrace(prefix_msg": %s", throughput.toString().data()); \
     }; \
+
+// #define TRACE_BLOCK_THROUGHPUT(prefix_msg, byteCount) _TRACE_BLOCK_THROUGHPUT(prefix_msg, byteCount, __LINE__)
 
 } // namespace core
 

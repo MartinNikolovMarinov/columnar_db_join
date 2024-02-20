@@ -64,8 +64,6 @@ i32 binarySearchJoinOnTwoColumnGroups() {
     for (auto& t : tests) {
         auto result = dbms::binarySearchJoin(t.left, t.right, t.leftColNames, t.rightColNames);
 
-        sortDataInColumns(result.columns); // TODO: is this necessary?
-
         Assert(result.names.colNames == t.expected.names.colNames, "Column names mismatch");
         Assert(result.names.valueColNames == t.expected.names.valueColNames, "Value column names mismatch");
         assertColumns(result.columns, t.expected.columns);
@@ -146,8 +144,6 @@ i32 binarySearchJoinOnMultipleColumnGroups() {
         for (u64 i = 2; i < t.sequence.size(); i++) {
             result = dbms::binarySearchJoin(result.columns, t.sequence[i], result.names, t.sequenceColNames[i]);
         }
-
-        sortDataInColumns(result.columns);
 
         Assert(result.names.colNames == t.expected.names.colNames, "Column names mismatch");
         Assert(result.names.valueColNames == t.expected.names.valueColNames, "Value column names mismatch");
