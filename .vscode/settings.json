@@ -66,6 +66,7 @@
         "codecvt": "cpp",
         "typeindex": "cpp",
         "optional": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "filesystem": "cpp"
     }
 }

@@ -78,8 +78,6 @@ set(src_files
     src/cross_join.cpp
     src/merge_join.cpp
     src/binary_search_join.cpp
-
-    tools/generate.cpp
 )
 
 add_executable(${executable_name} ${src_files} main.cpp)
@@ -106,7 +104,6 @@ target_compile_definitions(${executable_name} PUBLIC
 )
 
 target_set_default_flags(${executable_name})
-
 
 if(BUILD_TESTS)
     message(STATUS "Configuring tests")

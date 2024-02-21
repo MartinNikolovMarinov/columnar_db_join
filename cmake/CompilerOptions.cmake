@@ -25,7 +25,7 @@ macro(generate_common_flags
 
         set(local_common_flags ${local_common_flags}
             /MP
-            -Wall -W4 -WX
+            -Wall -W4
             -nologo -FC
             /fastfail
             /w14254 # Warns if more than one operator conversion is applied to get from one type to another (useful for finding implicit conversions that might be unintended).

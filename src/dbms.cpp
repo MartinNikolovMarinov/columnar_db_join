@@ -38,7 +38,7 @@ bool loadDatabase(const char* path, Database& db) {
         if (columnDir.is_directory()) {
             Database::Table t;
             t.name = columnDir.path().stem().string();
-            t.path = columnDir.path();
+            t.path = columnDir.path().string();
 
             for (const auto & columnFile : fs::directory_iterator(columnDir.path())) {
                 if (columnFile.is_regular_file()) {
@@ -460,7 +460,7 @@ void debug_printColumnGroup(const ColumnGroup& cols, const ColumnNames& columnNa
     // Print rows
     for (u64 i = 0; i < cols[0].data().size(); i++) {
         for (u64 j = 0; j < cols.size(); j++) {
-            printf("%lu\t\t", cols[j].data()[i]);
+            printf("%llu\t\t", cols[j].data()[i]);
         }
         printf("\n");
     }

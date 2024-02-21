@@ -62,11 +62,11 @@ static constexpr f32 MIN_NORMAL_F32 = static_cast<f32>(1.175494351e-38f);
 static constexpr char term_char = '\0';
 
 // Storage Sizes
-static constexpr u64 BYTE     = static_cast<u64>(1);
-static constexpr u64 KILOBYTE = static_cast<u64>(1024 * BYTE);
-static constexpr u64 MEGABYTE = static_cast<u64>(1024 * KILOBYTE);
-static constexpr u64 GIGABYTE = static_cast<u64>(1024 * MEGABYTE);
-static constexpr u64 TERABYTE = static_cast<u64>(1024 * GIGABYTE);
+static constexpr u64 CORE_BYTE     = static_cast<u64>(1);
+static constexpr u64 CORE_KILOBYTE = static_cast<u64>(1024 * CORE_BYTE);
+static constexpr u64 CORE_MEGABYTE = static_cast<u64>(1024 * CORE_KILOBYTE);
+static constexpr u64 CORE_GIGABYTE = static_cast<u64>(1024 * CORE_MEGABYTE);
+static constexpr u64 CORE_TERABYTE = static_cast<u64>(1024 * CORE_GIGABYTE);
 
 // Duration constants in ns
 static constexpr u64 NANOSECOND  = static_cast<u64>(1);                  //                 1ns

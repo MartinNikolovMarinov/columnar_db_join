@@ -5,6 +5,7 @@ The program takes a database directory as input and joins the columns to produce
 The program is written in C++ 20 and uses the following libraries:
 
 - [mio](https://github.com/vimpunk/mio/blob/master/single_include/mio/mio.hpp): for memory-mapped file I/O. This is a very small single header library that provides a very basic corss-platform interface for memory mapping files. I used it for `mmap` and `munmap`. When the files are open I treat them as raw byte pointers noting more.
+- CMake is a build dependency.
 
 The program takes the following steps:
 

@@ -7,7 +7,7 @@ namespace core {
 
 namespace {
 
-constexpr addr_size BUFFER_SIZE = KILOBYTE * 32;
+constexpr addr_size BUFFER_SIZE = CORE_KILOBYTE * 32;
 thread_local static char loggingBuffer[BUFFER_SIZE];
 
 LogLevel minimumLogLevel = LogLevel::L_INFO;
