@@ -394,14 +394,8 @@ JoinResult executeJoin(Database& db) {
         }
 
         if (matchIdxA == -1 && matchIdxB == -1) {
-            if (a.size() > b.size()) {
-                logInfo("Joining A and B with cross join.");
-                return crossJoin(a, b, aNames, bNames);
-            }
-            else {
-                logInfo("Joining B and A with cross join.");
-                return crossJoin(b, a, aNames, bNames);
-            }
+            logInfo("Joining A and B with cross join.");
+            return crossJoin(a, b, aNames, bNames);
         }
         else if (matchIdxA == 0 && matchIdxA == matchIdxB) {
             // Both have the same clustered index.
