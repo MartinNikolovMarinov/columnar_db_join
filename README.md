@@ -48,6 +48,8 @@ make -j
 
 ## Examples
 
+Locally ran on my machine.
+
 ```bash
 ./dbms ../db/small-example
 ...
@@ -68,3 +70,19 @@ Total running time: 598635ns
 Total sum of squared values: 266472168
 Total running time: 02s 305ms
 ```
+
+## Latest Cross-Platform test results
+
+Builds successfully and tests pass successfully on:
+
+- Ubuntu x86_64 latest
+- macOS x86_64 latest
+- Windows x86_64 latest
+
+https://github.com/MartinNikolovMarinov/columnar_db_join/actions/runs/7990096337
+
+Github actions do not allow for testing with macOS arm64, so I tested it locally and it works.
+
+## Note on performance
+
+Application was developed with GCC on Ubuntu, so the build on other platforms and compilers has a lot of warnings, but it should be working. Also the generated assembly was inspected only for GCC on Linux, so on other systems generated code might be slower.
