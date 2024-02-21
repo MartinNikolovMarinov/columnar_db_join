@@ -21,7 +21,7 @@ i32 main(i32 argc, char *argv[]) {
         return -2;
     }
 
-    INFO_BLOCK_CPU_TIME("total");
+    INFO_BLOCK_CPU_TIME("Total running time");
 
     Database db;
     if (!loadDatabase(dbDirectory.c_str(), db)) {
@@ -34,7 +34,7 @@ i32 main(i32 argc, char *argv[]) {
     u64 totalSum = dbms::sumSquared(result);
 
     debug_printColumnGroup(result.columns, result.names);
-    logInfo("Total sum of squared values: %llu", totalSum);
+    printf("\nTotal sum of squared values: %llu\n\n", totalSum);
 
     return 0;
 }
